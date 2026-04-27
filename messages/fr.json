@@ -1,0 +1,87 @@
+{
+  "brand": {
+    "name": "VIP WATCH",
+    "tagline": "Personnalisation sur mesure de garde-temps de luxe"
+  },
+  "nav": {
+    "commissions": "Réalisations",
+    "services": "Services",
+    "process": "Processus",
+    "artsAndCrafts": "Arts & Métiers",
+    "atelier": "Atelier",
+    "warranty": "Garantie",
+    "faq": "FAQ",
+    "blog": "Journal",
+    "contact": "Contact"
+  },
+  "footer": {
+    "newsletterHeading": "Restez en contact",
+    "newsletterCopy": "Recevez nos nouvelles réalisations et actualités de l'atelier.",
+    "newsletterCta": "S'abonner",
+    "rights": "© {year} VIP WATCH. Tous droits réservés."
+  },
+  "home": {
+    "heroHeading": "Un atelier pour le collectionneur singulier",
+    "heroCta": "Commencer une réalisation",
+    "intro": "Nous modifions la montre que vous possédez déjà — gravée, squelettisée, sertie, finie — selon un cahier des charges qui n'appartient qu'à vous.",
+    "featuredHeading": "Réalisations récentes",
+    "departmentsHeading": "Nos départements",
+    "testimonialsHeading": "Paroles de clients"
+  },
+  "commissions": {
+    "title": "Réalisations",
+    "subtitle": "Une sélection de pièces façonnées à l'atelier."
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Sept départements, un seul atelier."
+  },
+  "process": {
+    "title": "Processus",
+    "subtitle": "De la première conversation à la livraison."
+  },
+  "artsAndCrafts": {
+    "title": "Arts & Métiers",
+    "subtitle": "Les mains derrière chaque réalisation."
+  },
+  "atelier": {
+    "title": "L'Atelier",
+    "subtitle": "Basé à Genève, sur rendez-vous."
+  },
+  "warranty": {
+    "title": "Garantie Internationale",
+    "subtitle": "Chaque réalisation porte notre certification."
+  },
+  "faq": {
+    "title": "Questions Fréquentes"
+  },
+  "contact": {
+    "title": "Commencer une Réalisation",
+    "subtitle": "Parlez-nous de la pièce et du cahier des charges.",
+    "submit": "Envoyer la demande",
+    "fields": {
+      "name": "Nom complet",
+      "email": "Email",
+      "phone": "Téléphone (facultatif)",
+      "country": "Pays",
+      "watchBrand": "Marque de la montre",
+      "watchModel": "Modèle",
+      "watchReference": "Référence (facultatif)",
+      "message": "Brief du projet",
+      "budget": "Budget",
+      "preferredContact": "Mode de contact préféré",
+      "consent": "J'accepte la politique de confidentialité",
+      "newsletter": "Recevoir les actualités de l'atelier"
+    }
+  },
+  "blog": {
+    "title": "Journal",
+    "subtitle": "Notes depuis l'atelier."
+  },
+  "common": {
+    "viewAll": "Tout voir",
+    "readMore": "Lire la suite",
+    "loading": "Chargement…",
+    "back": "Retour"
+  }
+}

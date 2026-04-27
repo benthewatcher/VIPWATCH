@@ -1,0 +1,87 @@
+{
+  "brand": {
+    "name": "VIP WATCH",
+    "tagline": "Bespoke personalisation of luxury timepieces"
+  },
+  "nav": {
+    "commissions": "Commissions",
+    "services": "Services",
+    "process": "Process",
+    "artsAndCrafts": "Arts & Crafts",
+    "atelier": "Atelier",
+    "warranty": "Warranty",
+    "faq": "FAQ",
+    "blog": "Journal",
+    "contact": "Contact"
+  },
+  "footer": {
+    "newsletterHeading": "Stay in touch",
+    "newsletterCopy": "Receive new commissions and atelier news.",
+    "newsletterCta": "Subscribe",
+    "rights": "© {year} VIP WATCH. All rights reserved."
+  },
+  "home": {
+    "heroHeading": "An atelier for the singular collector",
+    "heroCta": "Begin a commission",
+    "intro": "We modify the watch you already own — engraved, skeletonised, gem-set, finished — to a brief that is yours alone.",
+    "featuredHeading": "Recent commissions",
+    "departmentsHeading": "Our departments",
+    "testimonialsHeading": "From our clients"
+  },
+  "commissions": {
+    "title": "Commissions",
+    "subtitle": "A selection of pieces shaped in the atelier."
+  },
+  "services": {
+    "title": "Services",
+    "subtitle": "Seven departments, one workshop."
+  },
+  "process": {
+    "title": "Process",
+    "subtitle": "From first conversation to final delivery."
+  },
+  "artsAndCrafts": {
+    "title": "Arts & Crafts",
+    "subtitle": "The hands behind every commission."
+  },
+  "atelier": {
+    "title": "The Atelier",
+    "subtitle": "Geneva-based, by appointment only."
+  },
+  "warranty": {
+    "title": "International Warranty",
+    "subtitle": "Every commission carries our certification."
+  },
+  "faq": {
+    "title": "Frequently Asked Questions"
+  },
+  "contact": {
+    "title": "Begin a Commission",
+    "subtitle": "Tell us about the piece and the brief.",
+    "submit": "Send enquiry",
+    "fields": {
+      "name": "Full name",
+      "email": "Email",
+      "phone": "Phone (optional)",
+      "country": "Country",
+      "watchBrand": "Watch brand",
+      "watchModel": "Watch model",
+      "watchReference": "Reference number (optional)",
+      "message": "Project brief",
+      "budget": "Budget band",
+      "preferredContact": "Preferred contact method",
+      "consent": "I accept the privacy policy",
+      "newsletter": "Send me atelier news"
+    }
+  },
+  "blog": {
+    "title": "Journal",
+    "subtitle": "Notes from the workshop."
+  },
+  "common": {
+    "viewAll": "View all",
+    "readMore": "Read more",
+    "loading": "Loading…",
+    "back": "Back"
+  }
+}

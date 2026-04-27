@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# VIP WATCH
 
-## Getting Started
+Bilingual (EN default, FR) PWA for a luxury watch personalisation atelier.
 
-First, run the development server:
+Stack: Next.js 16 (App Router) · TypeScript · Tailwind v4 · shadcn/ui · Supabase · next-intl · Resend.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.local.example .env.local   # fill in Supabase + Resend keys
+npm run dev                        # http://localhost:3000 → /en
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Apply database schema
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Open Supabase SQL editor for project `edpidhthaunlmuktlkxl` and run, in order:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. `supabase/migrations/0001_init.sql` (tables, indexes, triggers)
+2. `supabase/migrations/0002_rls.sql` (RLS policies + `is_admin()` helper)
 
-## Learn More
+After signing in once with magic link, seed your admin row:
 
-To learn more about Next.js, take a look at the following resources:
+```sql
+insert into profiles (id, email, full_name, role)
+values (
+  (select id from auth.users where email = 'bw@minc.watch'),
+  'bw@minc.watch', 'Ben', 'owner'
+);
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Then regenerate types:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx supabase gen types typescript --project-id edpidhthaunlmuktlkxl > lib/supabase/types.ts
+```
 
-## Deploy on Vercel
+## Project layout
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Public site lives under `app/(public)/[locale]/...`, admin under `app/(admin)/admin/...`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Phase status
+
+| Phase | What | Status |
+|---|---|---|
+| 0 | Scaffold + deps + shadcn | done |
+| 1 | Schema + RLS (SQL written, paste into Supabase) | awaiting paste |
+| 2–10 | Design system → forms → admin → PWA → deploy | pending |

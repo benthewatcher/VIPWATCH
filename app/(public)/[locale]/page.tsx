@@ -1,5 +1,5 @@
 import { setRequestLocale } from 'next-intl/server';
-import { Link } from '@/lib/i18n/routing';
+import { Link } from '@/lib/i18n/navigation';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { SectionIntro } from '@/components/site/SectionIntro';

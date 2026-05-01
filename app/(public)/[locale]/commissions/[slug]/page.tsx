@@ -3,7 +3,7 @@ import { setRequestLocale } from 'next-intl/server';
 import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
-import { Link } from '@/lib/i18n/routing';
+import { Link } from '@/lib/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createAnonClient } from '@/lib/supabase/anon';
 import { publicMediaUrl } from '@/lib/utils/storage';

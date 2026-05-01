@@ -1,5 +1,5 @@
 import { FadeUp } from './FadeUp';
-import { Link } from '@/lib/i18n/routing';
+import { Link } from '@/lib/i18n/navigation';
 
 export function SectionIntro({
   eyebrow,

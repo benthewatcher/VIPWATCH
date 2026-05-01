@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Link } from '@/lib/i18n/routing';
+import { Link } from '@/lib/i18n/navigation';
 
 export type CommissionCardProps = {
   slug: string;

@@ -4,7 +4,7 @@ import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PageHeader } from '@/components/site/PageHeader';
 import { FadeUp } from '@/components/site/FadeUp';
-import { Link } from '@/lib/i18n/routing';
+import { Link } from '@/lib/i18n/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';

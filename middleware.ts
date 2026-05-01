@@ -5,7 +5,7 @@ import { updateSession } from './lib/supabase/middleware';
 
 const intl = createIntlMiddleware(routing);
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   if (pathname.startsWith('/admin')) {
@@ -43,5 +43,6 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
+  runtime: 'nodejs',
   matcher: ['/((?!_next|_vercel|.*\\..*).*)'],
 };

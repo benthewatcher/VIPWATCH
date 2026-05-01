@@ -1,9 +1,18 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import createIntlMiddleware from 'next-intl/middleware';
-import { routing } from './lib/i18n/routing';
+import { locales, defaultLocale } from './lib/i18n/config';
 import { updateSession } from './lib/supabase/middleware';
 
-const intl = createIntlMiddleware(routing);
+function localeRedirect(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const hasLocale = locales.some(
+    (l) => pathname === `/${l}` || pathname.startsWith(`/${l}/`),
+  );
+  if (hasLocale) return NextResponse.next();
+
+  const url = req.nextUrl.clone();
+  url.pathname = `/${defaultLocale}${pathname === '/' ? '' : pathname}`;
+  return NextResponse.redirect(url);
+}
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -39,7 +48,7 @@ export async function middleware(req: NextRequest) {
 
   if (pathname.startsWith('/api')) return NextResponse.next();
 
-  return intl(req);
+  return localeRedirect(req);
 }
 
 export const config = {

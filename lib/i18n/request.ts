@@ -1,6 +1,10 @@
 import { getRequestConfig } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { locales, type Locale } from './config';
+import en from '../../messages/en.json';
+import fr from '../../messages/fr.json';
+
+const messages: Record<Locale, typeof en> = { en, fr };
 
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
@@ -12,6 +16,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: (await import(`../../messages/${locale}.json`)).default,
+    messages: messages[locale],
   };
 });

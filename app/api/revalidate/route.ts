@@ -8,6 +8,6 @@ export async function POST(req: NextRequest) {
   }
   const { path, tag } = await req.json();
   if (path) revalidatePath(path, 'page');
-  if (tag) revalidateTag(tag, 'max');
+  if (tag) revalidateTag(tag);
   return NextResponse.json({ ok: true });
 }

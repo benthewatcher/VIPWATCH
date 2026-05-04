@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
+import { CommissionCard } from '@/components/site/CommissionCard';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAnonClient } from '@/lib/supabase/anon';
@@ -38,7 +39,31 @@ async function getCommission(slug: string) {
     .select('id, url, alt_en, alt_fr, position')
     .eq('commission_id', row.id)
     .order('position');
-  return { row, gallery: gallery ?? [] };
+  // commission_blocks isn't in generated supabase types yet — cast.
+  const { data: blocks } = await (supabase as any)
+    .from('commission_blocks')
+    .select('id, position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+    .eq('commission_id', row.id)
+    .order('position');
+  const { data: more } = await supabase
+    .from('commissions')
+    .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
+    .eq('status', 'published')
+    .neq('id', row.id)
+    .order('position', { ascending: true })
+    .limit(3);
+  type Block = {
+    id: string;
+    position: number;
+    type: 'paragraph' | 'image' | 'image_pair';
+    body_en: string | null;
+    body_fr: string | null;
+    image_url: string | null;
+    image_url_2: string | null;
+    alt_en: string | null;
+    alt_fr: string | null;
+  };
+  return { row, gallery: gallery ?? [], blocks: (blocks ?? []) as Block[], more: more ?? [] };
 }
 
 export default async function CommissionDetail({
@@ -49,7 +74,7 @@ export default async function CommissionDetail({
   const { locale, slug } = await params;
   const result = await getCommission(slug);
   if (!result) notFound();
-  const { row, gallery } = result;
+  const { row, gallery, blocks, more } = result;
   const loc = locale as Locale;
 
   const title = pickLocale(row, 'title', loc) ?? '';
@@ -71,14 +96,72 @@ export default async function CommissionDetail({
         </FadeUp>
       </Hero>
 
-      {body && (
-        <section className="mx-auto max-w-3xl px-6 py-24 md:py-32">
-          <FadeUp>
-            <div className="font-serif text-2xl md:text-3xl leading-snug whitespace-pre-line">
-              {body}
-            </div>
-          </FadeUp>
-        </section>
+      {blocks.length > 0 ? (
+        <div className="py-24 md:py-32 grid gap-20">
+          {blocks.map((block) => {
+            if (block.type === 'paragraph') {
+              const text = pickLocale(block, 'body', loc);
+              if (!text) return null;
+              return (
+                <section key={block.id} className="mx-auto max-w-3xl px-6">
+                  <FadeUp>
+                    <div className="font-serif text-2xl md:text-3xl leading-snug whitespace-pre-line">
+                      {text}
+                    </div>
+                  </FadeUp>
+                </section>
+              );
+            }
+            if (block.type === 'image') {
+              const url = publicMediaUrl(block.image_url);
+              if (!url) return null;
+              const alt = pickLocale(block, 'alt', loc) ?? title;
+              return (
+                <section key={block.id} className="mx-auto max-w-5xl px-6">
+                  <FadeUp>
+                    <div className="relative aspect-[3/2] bg-bg-secondary overflow-hidden">
+                      <Image src={url} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 1024px) 1024px, 100vw" />
+                    </div>
+                  </FadeUp>
+                </section>
+              );
+            }
+            if (block.type === 'image_pair') {
+              const url1 = publicMediaUrl(block.image_url);
+              const url2 = publicMediaUrl(block.image_url_2);
+              const alt = pickLocale(block, 'alt', loc) ?? title;
+              return (
+                <section key={block.id} className="mx-auto max-w-7xl px-6">
+                  <FadeUp>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {url1 && (
+                        <div className="relative aspect-[3/4] bg-bg-secondary overflow-hidden">
+                          <Image src={url1} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
+                        </div>
+                      )}
+                      {url2 && (
+                        <div className="relative aspect-[3/4] bg-bg-secondary overflow-hidden">
+                          <Image src={url2} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
+                        </div>
+                      )}
+                    </div>
+                  </FadeUp>
+                </section>
+              );
+            }
+            return null;
+          })}
+        </div>
+      ) : (
+        body && (
+          <section className="mx-auto max-w-3xl px-6 py-24 md:py-32">
+            <FadeUp>
+              <div className="font-serif text-2xl md:text-3xl leading-snug whitespace-pre-line">
+                {body}
+              </div>
+            </FadeUp>
+          </section>
+        )
       )}
 
       {gallery.length > 0 && (
@@ -100,12 +183,35 @@ export default async function CommissionDetail({
         </section>
       )}
 
+      {more.length > 0 && (
+        <section className="border-t border-divider">
+          <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
+            <h2 className="font-serif text-3xl md:text-4xl mb-12">
+              {loc === 'ar' ? 'Autres réalisations' : 'More commissions'}
+            </h2>
+            <div className="grid gap-8 md:grid-cols-3">
+              {more.map((c, i) => (
+                <FadeUp key={c.id} delay={i * 0.08}>
+                  <CommissionCard
+                    slug={c.slug}
+                    title={pickLocale(c, 'title', loc) ?? ''}
+                    brand={c.watch_model}
+                    image={publicMediaUrl(c.card_image ?? c.hero_image)}
+                    locale={loc}
+                  />
+                </FadeUp>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32 text-center">
         <h2 className="font-serif text-4xl md:text-5xl">
           {loc === 'ar' ? 'Une réalisation similaire vous intéresse ?' : 'Considering a similar commission?'}
         </h2>
         <Link
-          href="/contact"
+          href={`/${loc}/contact`}
           className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
         >
           {loc === 'ar' ? 'Contacter l\'atelier' : 'Contact the atelier'}

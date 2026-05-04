@@ -62,7 +62,7 @@ function Home({ locale, page, featured, services }: HomeProps) {
           <SectionIntro
             eyebrow="01"
             heading={t('featuredHeading')}
-            cta={{ label: locale === 'ar' ? 'Toutes les réalisations' : 'View all commissions', href: '/commissions' }}
+            cta={{ label: locale === 'ar' ? 'Toutes les réalisations' : 'View all commissions', href: `/${locale}/commissions` }}
           />
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             {featured.map((c, i) => (
@@ -72,6 +72,7 @@ function Home({ locale, page, featured, services }: HomeProps) {
                   title={pickLocale(c, 'title', locale) ?? ''}
                   brand={c.watch_model}
                   image={publicMediaUrl(c.card_image ?? c.hero_image)}
+                  locale={locale}
                 />
               </FadeUp>
             ))}
@@ -85,14 +86,14 @@ function Home({ locale, page, featured, services }: HomeProps) {
             <SectionIntro
               eyebrow="02"
               heading={t('departmentsHeading')}
-              cta={{ label: locale === 'ar' ? 'Voir les services' : 'Explore services', href: '/services' }}
+              cta={{ label: locale === 'ar' ? 'Voir les services' : 'Explore services', href: `/${locale}/services` }}
             />
           </div>
           <div className="grid gap-px bg-divider md:grid-cols-2 lg:grid-cols-4">
             {services.map((s, i) => (
               <FadeUp key={s.id} delay={i * 0.05}>
                 <Link
-                  href="/services"
+                  href={`/${locale}/services`}
                   className="block bg-bg-primary p-10 aspect-square flex items-end h-full group"
                 >
                   <div>

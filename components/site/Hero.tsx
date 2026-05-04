@@ -38,7 +38,7 @@ export function Hero({
             animate={reduced ? undefined : { scale: 1 }}
             transition={{ duration: 6, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Image src={image} alt={alt} fill priority className="object-cover" sizes="100vw" />
+            <Image src={image} alt={alt} fill priority quality={95} className="object-cover" sizes="100vw" />
           </motion.div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-b from-bg-primary via-bg-secondary to-bg-primary" />

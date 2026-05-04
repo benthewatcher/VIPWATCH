@@ -150,3 +150,81 @@ export async function setCommissionImagePosition(
   revalidatePath(`/admin/commissions/${commissionId}`);
   revalidatePath('/[locale]/commissions/[slug]', 'page');
 }
+
+// Block actions (paragraph + image content blocks)
+export type CommissionBlockType = 'paragraph' | 'image' | 'image_pair';
+
+export type CommissionBlockRow = {
+  id: string;
+  position: number;
+  type: CommissionBlockType;
+  body_en: string | null;
+  body_fr: string | null;
+  image_url: string | null;
+  image_url_2: string | null;
+  alt_en: string | null;
+  alt_fr: string | null;
+};
+
+// commission_blocks isn't in generated supabase types yet; cast to any until regenerated.
+export async function addCommissionBlock(
+  commissionId: string,
+  type: CommissionBlockType,
+): Promise<CommissionBlockRow> {
+  const supabase = (await createClient()) as any;
+  const { data: max } = await supabase
+    .from('commission_blocks')
+    .select('position')
+    .eq('commission_id', commissionId)
+    .order('position', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextPosition = ((max as { position?: number } | null)?.position ?? -1) + 1;
+  const { data, error } = await supabase
+    .from('commission_blocks')
+    .insert({ commission_id: commissionId, type, position: nextPosition })
+    .select('id, position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+    .single();
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+  return data as CommissionBlockRow;
+}
+
+export async function updateCommissionBlock(
+  commissionId: string,
+  blockId: string,
+  patch: Partial<Omit<CommissionBlockRow, 'id' | 'position' | 'type'>>,
+) {
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase
+    .from('commission_blocks')
+    .update(patch)
+    .eq('id', blockId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+}
+
+export async function deleteCommissionBlock(commissionId: string, blockId: string) {
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase.from('commission_blocks').delete().eq('id', blockId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+}
+
+export async function setCommissionBlockPosition(
+  commissionId: string,
+  blockId: string,
+  position: number,
+) {
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase
+    .from('commission_blocks')
+    .update({ position })
+    .eq('id', blockId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+}

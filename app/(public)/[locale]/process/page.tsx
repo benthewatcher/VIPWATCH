@@ -68,7 +68,7 @@ function Content({ locale, steps }: { locale: Locale; steps: Step[] }) {
           {locale === 'ar' ? 'Prêt à commencer ?' : 'Ready to begin?'}
         </h2>
         <Link
-          href="/contact"
+          href={`/${locale}/contact`}
           className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
         >
           {locale === 'ar' ? 'Démarrer une demande' : 'Start an enquiry'}

@@ -49,6 +49,7 @@ function Content({
                   title={pickLocale(c, 'title', locale) ?? ''}
                   brand={c.watch_model}
                   image={publicMediaUrl(c.card_image ?? c.hero_image)}
+                  locale={locale}
                 />
               </FadeUp>
             ))}

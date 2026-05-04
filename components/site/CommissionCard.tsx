@@ -6,11 +6,12 @@ export type CommissionCardProps = {
   title: string;
   brand?: string | null;
   image?: string | null;
+  locale: string;
 };
 
-export function CommissionCard({ slug, title, brand, image }: CommissionCardProps) {
+export function CommissionCard({ slug, title, brand, image, locale }: CommissionCardProps) {
   return (
-    <Link href={`/commissions/${slug}`} className="group block">
+    <Link href={`/${locale}/commissions/${slug}`} className="group block">
       <div className="relative aspect-[3/4] overflow-hidden bg-bg-secondary border border-divider">
         {image ? (
           <Image

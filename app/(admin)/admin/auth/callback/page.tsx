@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export default function CallbackPage() {
-  const router = useRouter();
   const params = useSearchParams();
   const [msg, setMsg] = useState('Signing you in…');
 
   useEffect(() => {
     const supabase = createClient();
+
+    // Hard redirect — guarantees a fresh server fetch with the new cookies.
+    function go(path: string) {
+      window.location.href = path;
+    }
 
     async function run() {
       // Flow A: PKCE — ?code= in query
@@ -18,10 +22,10 @@ export default function CallbackPage() {
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          router.replace(`/admin/login?error=${encodeURIComponent(error.message)}`);
+          go(`/admin/login?error=${encodeURIComponent(error.message)}`);
           return;
         }
-        router.replace('/admin');
+        go('/admin');
         return;
       }
 
@@ -36,23 +40,23 @@ export default function CallbackPage() {
       if (access_token && refresh_token) {
         const { error } = await supabase.auth.setSession({ access_token, refresh_token });
         if (error) {
-          router.replace(`/admin/login?error=${encodeURIComponent(error.message)}`);
+          go(`/admin/login?error=${encodeURIComponent(error.message)}`);
           return;
         }
-        router.replace('/admin');
+        go('/admin');
         return;
       }
 
       // Flow C: error in hash
       const errCode = h.get('error_code') ?? h.get('error');
       const errDesc = h.get('error_description');
-      router.replace(
+      go(
         `/admin/login?error=${encodeURIComponent(errDesc ?? errCode ?? 'no_token')}`,
       );
     }
 
     run().catch((e) => setMsg(`Error: ${e?.message ?? 'unknown'}`));
-  }, [params, router]);
+  }, [params]);
 
   return (
     <div className="min-h-screen flex items-center justify-center text-text-muted text-sm tracking-[0.2em] uppercase">

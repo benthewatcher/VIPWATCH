@@ -17,11 +17,12 @@ const commissionSchema = z.object({
   is_featured: z.coerce.boolean().default(false),
   status: z.enum(['draft', 'published', 'archived']).default('draft'),
   title_en: z.string().min(1),
-  title_fr: z.string().nullable().optional(),
+  // _fr columns are NOT NULL in the DB; default to '' until a migration relaxes them.
+  title_fr: z.string().default(''),
   summary_en: z.string().nullable().optional(),
-  summary_fr: z.string().nullable().optional(),
+  summary_fr: z.string().default(''),
   body_en: z.string().nullable().optional(),
-  body_fr: z.string().nullable().optional(),
+  body_fr: z.string().default(''),
 });
 
 function parse(form: FormData) {
@@ -50,6 +51,9 @@ export async function createCommission(form: FormData) {
   const data = parse(form);
   const payload = {
     ...data,
+    title_fr: data.title_fr ?? '',
+    summary_fr: data.summary_fr ?? '',
+    body_fr: data.body_fr ?? '',
     published_at: data.status === 'published' ? new Date().toISOString() : null,
   };
   const supabase = await createClient();
@@ -74,6 +78,9 @@ export async function updateCommission(id: string, form: FormData) {
 
   const update = {
     ...data,
+    title_fr: data.title_fr ?? '',
+    summary_fr: data.summary_fr ?? '',
+    body_fr: data.body_fr ?? '',
     published_at:
       data.status === 'published' && !existing?.published_at
         ? new Date().toISOString()

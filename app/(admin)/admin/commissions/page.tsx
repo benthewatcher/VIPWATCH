@@ -63,12 +63,24 @@ export default async function CommissionsAdmin() {
                     </td>
                     <td className="px-4 py-3">{c.is_featured ? '★' : ''}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link
-                        href={`/admin/commissions/${c.id}`}
-                        className="text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"
-                      >
-                        Edit →
-                      </Link>
+                      <div className="flex items-center justify-end gap-4">
+                        {c.status === 'published' && c.slug && (
+                          <a
+                            href={`/en/commissions/${c.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"
+                          >
+                            View ↗
+                          </a>
+                        )}
+                        <Link
+                          href={`/admin/commissions/${c.id}`}
+                          className="text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"
+                        >
+                          Edit →
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );

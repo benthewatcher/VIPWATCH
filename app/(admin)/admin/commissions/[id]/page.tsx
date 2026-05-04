@@ -40,7 +40,22 @@ export default async function EditCommissionPage({ params }: { params: Promise<{
 
   return (
     <>
-      <AdminHeader title={row.title_en ?? 'Edit commission'} back={{ href: '/admin/commissions', label: 'Commissions' }} />
+      <AdminHeader
+        title={row.title_en ?? 'Edit commission'}
+        back={{ href: '/admin/commissions', label: 'Commissions' }}
+        actions={
+          row.status === 'published' && row.slug ? (
+            <a
+              href={`/en/commissions/${row.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border border-accent px-4 py-2 text-xs uppercase tracking-[0.2em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
+            >
+              View live ↗
+            </a>
+          ) : null
+        }
+      />
       <main className="p-10 grid gap-12">
         <CommissionForm row={row} action={update} submitLabel="Save changes" onDelete={remove} />
 

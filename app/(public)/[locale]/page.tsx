@@ -121,7 +121,7 @@ function Home({ locale, page, featured, services, collections, departments, test
         </section>
       )}
 
-      {atelier && (atelier.title_en || atelier.body_en) && (
+      {atelier && (atelier.title_en || atelier.body_en || atelier.eyebrow_en || atelier.image) && (
         <section className="border-t border-divider">
           <div className="mx-auto max-w-7xl px-6 py-24 md:py-32 grid gap-16 md:grid-cols-2 items-center">
             {atelier.image && (
@@ -371,7 +371,7 @@ function Home({ locale, page, featured, services, collections, departments, test
         </section>
       )}
 
-      {ctaStrip && (ctaStrip.title_en || ctaStrip.cta_url) && (
+      {ctaStrip && (ctaStrip.title_en || ctaStrip.body_en || ctaStrip.cta_url || ctaStrip.image) && (
         <section className="relative border-t border-divider overflow-hidden">
           {ctaStrip.image && (
             <>

@@ -1,7 +1,10 @@
 'use client';
 
+import { useRef, useState, useTransition } from 'react';
 import { Field, BilingualField } from './Field';
 import { ImageUpload } from './ImageUpload';
+import { generateCommissionCopy } from '@/lib/ai/generate-commission';
+import { Sparkles } from 'lucide-react';
 
 export type CommissionRow = {
   id?: string;
@@ -35,8 +38,56 @@ export function CommissionForm({
   onDelete?: () => void | Promise<void>;
 }) {
   const slug = row?.slug ?? '';
+  const formRef = useRef<HTMLFormElement>(null);
+  const [generating, startGenerate] = useTransition();
+  const [genError, setGenError] = useState<string | null>(null);
+
+  function handleGenerate(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+    setGenError(null);
+    const form = formRef.current;
+    if (!form) return;
+
+    const data = new FormData(form);
+    const ctx = {
+      title_en: (data.get('title_en') as string) || undefined,
+      watch_model: (data.get('watch_model') as string) || undefined,
+      client_initials: (data.get('client_initials') as string) || undefined,
+    };
+
+    if (!ctx.title_en && !ctx.watch_model && !ctx.client_initials) {
+      setGenError('Fill in at least the title, watch model, or client initials first.');
+      return;
+    }
+
+    startGenerate(async () => {
+      try {
+        const copy = await generateCommissionCopy(ctx);
+        const set = (name: string, value: string) => {
+          const el = form.elements.namedItem(name) as
+            | HTMLInputElement
+            | HTMLTextAreaElement
+            | null;
+          if (el) {
+            el.value = value;
+            // Notify React listeners (defensive — fields are uncontrolled)
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        };
+        set('summary_en', copy.summary_en);
+        set('summary_fr', copy.summary_ar);
+        set('body_en', copy.body_en);
+        set('body_fr', copy.body_ar);
+      } catch (err) {
+        setGenError(
+          err instanceof Error ? err.message : 'Generation failed. Try again.',
+        );
+      }
+    });
+  }
+
   return (
-    <form action={action} className="grid gap-8 max-w-4xl">
+    <form ref={formRef} action={action} className="grid gap-8 max-w-4xl">
       <div className="grid gap-6 md:grid-cols-3">
         <Field label="Slug" name="slug" defaultValue={slug} required placeholder="e.g. spider" />
         <Field label="Position" name="position" type="number" defaultValue={row?.position ?? 0} />
@@ -88,6 +139,24 @@ export function CommissionForm({
       <Field label="Hero video URL (optional)" name="hero_video" defaultValue={row?.hero_video ?? ''} placeholder="https://… .mp4" />
 
       <BilingualField label="Title" field="title" row={row as Record<string, unknown> | null} required />
+
+      {/* AI generate panel — sits between Title and Summary */}
+      <div className="border border-divider bg-bg-secondary/40 px-4 py-3 flex items-center justify-between gap-4">
+        <div className="text-xs text-text-muted">
+          Fill title + watch model first, then let Claude draft summary + body in EN and AR.
+        </div>
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={generating}
+          className="flex items-center gap-2 border border-accent px-4 py-2 text-xs uppercase tracking-[0.2em] text-accent hover:bg-accent hover:text-bg-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          <Sparkles size={14} />
+          {generating ? 'Generating…' : 'Generate copy'}
+        </button>
+      </div>
+      {genError && <p className="text-xs text-red-400 -mt-4">{genError}</p>}
+
       <BilingualField label="Summary" field="summary" row={row as Record<string, unknown> | null} textarea rows={2} />
       <BilingualField label="Body / narrative" field="body" row={row as Record<string, unknown> | null} textarea rows={10} />
 

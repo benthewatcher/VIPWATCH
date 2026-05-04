@@ -109,17 +109,35 @@ export async function addCommissionImage(commissionId: string, url: string) {
     .limit(1)
     .maybeSingle();
   const nextPosition = (max?.position ?? -1) + 1;
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('commission_images')
-    .insert({ commission_id: commissionId, url, position: nextPosition });
+    .insert({ commission_id: commissionId, url, position: nextPosition })
+    .select('id, url, position')
+    .single();
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/commissions/${commissionId}`);
   revalidatePath('/[locale]/commissions/[slug]', 'page');
+  return data;
 }
 
 export async function deleteCommissionImage(commissionId: string, imageId: string) {
   const supabase = await createClient();
   const { error } = await supabase.from('commission_images').delete().eq('id', imageId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+}
+
+export async function setCommissionImagePosition(
+  commissionId: string,
+  imageId: string,
+  position: number,
+) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from('commission_images')
+    .update({ position })
+    .eq('id', imageId);
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/commissions/${commissionId}`);
   revalidatePath('/[locale]/commissions/[slug]', 'page');

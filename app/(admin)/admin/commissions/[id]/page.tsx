@@ -8,6 +8,7 @@ import {
   deleteCommission,
   addCommissionImage,
   deleteCommissionImage,
+  setCommissionImagePosition,
 } from '../actions';
 
 export const metadata = { title: 'Edit commission' };
@@ -39,6 +40,7 @@ export default async function EditCommissionPage({ params }: { params: Promise<{
             initial={(gallery ?? []).map((g) => ({ id: g.id, url: g.url, position: g.position }))}
             addAction={addCommissionImage}
             removeAction={deleteCommissionImage}
+            setPositionAction={setCommissionImagePosition}
           />
         </section>
       </main>

@@ -37,11 +37,12 @@ function parse(form: FormData) {
     is_featured: form.get('is_featured') === 'on' || form.get('is_featured') === 'true',
     status: form.get('status') || 'draft',
     title_en: form.get('title_en'),
-    title_fr: form.get('title_fr') || null,
+    // _fr columns are NOT NULL in the DB; default to '' until a migration relaxes them.
+    title_fr: (form.get('title_fr') as string) || '',
     summary_en: form.get('summary_en') || null,
-    summary_fr: form.get('summary_fr') || null,
+    summary_fr: (form.get('summary_fr') as string) || '',
     body_en: form.get('body_en') || null,
-    body_fr: form.get('body_fr') || null,
+    body_fr: (form.get('body_fr') as string) || '',
   });
 }
 

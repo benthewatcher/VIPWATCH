@@ -64,7 +64,7 @@ function Home({ locale, page, featured, services }: HomeProps) {
           <SectionIntro
             eyebrow="01"
             heading={t('featuredHeading')}
-            cta={{ label: locale === 'fr' ? 'Toutes les réalisations' : 'View all commissions', href: '/commissions' }}
+            cta={{ label: locale === 'ar' ? 'Toutes les réalisations' : 'View all commissions', href: '/commissions' }}
           />
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             {featured.map((c, i) => (
@@ -87,7 +87,7 @@ function Home({ locale, page, featured, services }: HomeProps) {
             <SectionIntro
               eyebrow="02"
               heading={t('departmentsHeading')}
-              cta={{ label: locale === 'fr' ? 'Voir les services' : 'Explore services', href: '/services' }}
+              cta={{ label: locale === 'ar' ? 'Voir les services' : 'Explore services', href: '/services' }}
             />
           </div>
           <div className="grid gap-px bg-divider md:grid-cols-2 lg:grid-cols-4">

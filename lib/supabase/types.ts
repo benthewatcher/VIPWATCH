@@ -6,7 +6,7 @@
 export type PublishStatus = 'draft' | 'published' | 'archived';
 export type EnquiryStatus = 'new' | 'in_progress' | 'qualified' | 'won' | 'lost' | 'spam';
 export type AdminRole = 'owner' | 'editor';
-export type LocaleCode = 'fr' | 'en';
+export type LocaleCode = 'ar' | 'en';
 
 type Bilingual<K extends string, T = string | null> = {
   [P in `${K}_en` | `${K}_fr`]: T;

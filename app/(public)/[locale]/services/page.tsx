@@ -108,13 +108,13 @@ function Content({ locale, services }: { locale: Locale; services: ServiceRow[] 
 
       <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32 text-center">
         <h2 className="font-serif text-4xl md:text-5xl">
-          {locale === 'fr' ? 'Commencer une réalisation' : 'Begin a commission'}
+          {locale === 'ar' ? 'Commencer une réalisation' : 'Begin a commission'}
         </h2>
         <Link
           href="/contact"
           className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
         >
-          {locale === 'fr' ? "Contacter l'atelier" : 'Contact the atelier'}
+          {locale === 'ar' ? "Contacter l'atelier" : 'Contact the atelier'}
         </Link>
       </section>
     </>

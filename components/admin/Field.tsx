@@ -7,6 +7,7 @@ export function Field({
   rows = 4,
   required,
   placeholder,
+  dir,
 }: {
   label: string;
   name: string;
@@ -16,6 +17,7 @@ export function Field({
   rows?: number;
   required?: boolean;
   placeholder?: string;
+  dir?: 'ltr' | 'rtl';
 }) {
   const value = defaultValue ?? '';
   return (
@@ -28,6 +30,7 @@ export function Field({
           required={required}
           defaultValue={value as string}
           placeholder={placeholder}
+          dir={dir}
           className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
       ) : (
@@ -37,6 +40,7 @@ export function Field({
           required={required}
           defaultValue={value as string}
           placeholder={placeholder}
+          dir={dir}
           className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
       )}
@@ -66,7 +70,7 @@ export function BilingualField({
       <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{label}</p>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
         <Field label="EN" name={`${field}_en`} defaultValue={en} textarea={textarea} rows={rows} required={required} />
-        <Field label="FR" name={`${field}_fr`} defaultValue={fr} textarea={textarea} rows={rows} required={required} />
+        <Field label="AR" name={`${field}_fr`} defaultValue={fr} textarea={textarea} rows={rows} required={required} dir="rtl" />
       </div>
     </div>
   );

@@ -67,13 +67,13 @@ function Content({ locale, steps }: { locale: Locale; steps: Step[] }) {
 
       <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32 text-center">
         <h2 className="font-serif text-4xl md:text-5xl">
-          {locale === 'fr' ? 'Prêt à commencer ?' : 'Ready to begin?'}
+          {locale === 'ar' ? 'Prêt à commencer ?' : 'Ready to begin?'}
         </h2>
         <Link
           href="/contact"
           className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
         >
-          {locale === 'fr' ? 'Démarrer une demande' : 'Start an enquiry'}
+          {locale === 'ar' ? 'Démarrer une demande' : 'Start an enquiry'}
         </Link>
       </section>
     </>

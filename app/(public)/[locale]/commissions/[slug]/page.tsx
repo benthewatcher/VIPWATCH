@@ -21,7 +21,7 @@ export async function generateStaticParams() {
   // Generate for both locales.
   return (data ?? []).flatMap((c) => [
     { locale: 'en', slug: c.slug },
-    { locale: 'fr', slug: c.slug },
+    { locale: 'ar', slug: c.slug },
   ]);
 }
 
@@ -104,13 +104,13 @@ export default async function CommissionDetail({
 
       <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32 text-center">
         <h2 className="font-serif text-4xl md:text-5xl">
-          {loc === 'fr' ? 'Une réalisation similaire vous intéresse ?' : 'Considering a similar commission?'}
+          {loc === 'ar' ? 'Une réalisation similaire vous intéresse ?' : 'Considering a similar commission?'}
         </h2>
         <Link
           href="/contact"
           className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
         >
-          {loc === 'fr' ? 'Contacter l\'atelier' : 'Contact the atelier'}
+          {loc === 'ar' ? 'Contacter l\'atelier' : 'Contact the atelier'}
         </Link>
       </section>
     </article>

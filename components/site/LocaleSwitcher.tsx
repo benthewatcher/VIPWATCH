@@ -1,15 +1,19 @@
 'use client';
 
-import { useLocale } from 'next-intl';
-import { usePathname, useRouter } from '@/lib/i18n/navigation';
-import { locales, type Locale } from '@/lib/i18n/config';
+import { usePathname, useRouter } from 'next/navigation';
+import { locales } from '@/lib/i18n/config';
 import { useTransition } from 'react';
 
-export function LocaleSwitcher() {
-  const locale = useLocale() as Locale;
+export function LocaleSwitcher({ locale }: { locale: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [, startTransition] = useTransition();
+
+  // Strip the existing locale prefix to get the bare path.
+  const stripped = locales.reduce(
+    (p, l) => (p.startsWith(`/${l}`) ? p.slice(l.length + 1) || '/' : p),
+    pathname,
+  );
 
   return (
     <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
@@ -17,7 +21,11 @@ export function LocaleSwitcher() {
         <span key={l} className="flex items-center gap-2">
           {i > 0 && <span className="text-text-muted/50">/</span>}
           <button
-            onClick={() => startTransition(() => router.replace(pathname, { locale: l }))}
+            onClick={() =>
+              startTransition(() =>
+                router.replace(`/${l}${stripped === '/' ? '' : stripped}`),
+              )
+            }
             className={
               l === locale
                 ? 'text-text-primary'

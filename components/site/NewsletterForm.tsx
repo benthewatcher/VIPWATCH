@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { getT } from '@/lib/i18n/t';
 
-export function NewsletterForm() {
-  const t = useTranslations('footer');
+export function NewsletterForm({ locale }: { locale: string }) {
+  const t = getT(locale, 'footer');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done'>('idle');
 

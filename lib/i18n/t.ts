@@ -17,11 +17,15 @@ type Dict = Record<string, unknown>;
 export function getT(locale: string, namespace?: string) {
   const dict = ((all as Record<string, Dict>)[locale] ?? (all as Record<string, Dict>).en) as Dict;
   const ns: Dict = namespace ? ((dict[namespace] as Dict) ?? {}) : dict;
-  return (key: string): string => {
+  return (key: string, params?: Record<string, string | number>): string => {
     const parts = key.split('.');
     let v: unknown = ns;
     for (const p of parts) v = (v as Dict | undefined)?.[p];
-    return typeof v === 'string' ? v : key;
+    if (typeof v !== 'string') return key;
+    if (!params) return v;
+    return v.replace(/\{(\w+)\}/g, (_, k) =>
+      params[k] !== undefined ? String(params[k]) : `{${k}}`,
+    );
   };
 }
 

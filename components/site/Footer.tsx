@@ -1,14 +1,15 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { Link } from '@/lib/i18n/navigation';
+import { getT } from '@/lib/i18n/t';
+import Link from 'next/link';
 import { NewsletterForm } from './NewsletterForm';
 
-export function Footer() {
-  const t = useTranslations('footer');
-  const tNav = useTranslations('nav');
-  const tBrand = useTranslations('brand');
+export function Footer({ locale }: { locale: string }) {
+  const t = getT(locale, 'footer');
+  const tNav = getT(locale, 'nav');
+  const tBrand = getT(locale, 'brand');
   const year = new Date().getFullYear();
+  const localized = (href: string) => `/${locale}${href === '/' ? '' : href}`;
 
   return (
     <footer className="border-t border-divider bg-bg-primary">
@@ -21,17 +22,17 @@ export function Footer() {
         <div>
           <h3 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-4">Navigate</h3>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/commissions" className="hover:text-accent">{tNav('commissions')}</Link></li>
-            <li><Link href="/services" className="hover:text-accent">{tNav('services')}</Link></li>
-            <li><Link href="/atelier" className="hover:text-accent">{tNav('atelier')}</Link></li>
-            <li><Link href="/contact" className="hover:text-accent">{tNav('contact')}</Link></li>
+            <li><Link href={localized('/commissions')} className="hover:text-accent">{tNav('commissions')}</Link></li>
+            <li><Link href={localized('/services')} className="hover:text-accent">{tNav('services')}</Link></li>
+            <li><Link href={localized('/atelier')} className="hover:text-accent">{tNav('atelier')}</Link></li>
+            <li><Link href={localized('/contact')} className="hover:text-accent">{tNav('contact')}</Link></li>
           </ul>
         </div>
 
         <div>
           <h3 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-4">{t('newsletterHeading')}</h3>
           <p className="text-sm text-text-muted mb-4">{t('newsletterCopy')}</p>
-          <NewsletterForm />
+          <NewsletterForm locale={locale} />
         </div>
       </div>
 
@@ -39,9 +40,9 @@ export function Footer() {
         <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col md:flex-row justify-between gap-4 text-xs text-text-muted">
           <span>{t('rights', { year })}</span>
           <div className="flex gap-6">
-            <Link href="/legal/privacy" className="hover:text-accent">Privacy</Link>
-            <Link href="/legal/terms" className="hover:text-accent">Terms</Link>
-            <Link href="/legal/mentions-legales" className="hover:text-accent">Legal</Link>
+            <Link href={localized('/legal/privacy')} className="hover:text-accent">Privacy</Link>
+            <Link href={localized('/legal/terms')} className="hover:text-accent">Terms</Link>
+            <Link href={localized('/legal/mentions-legales')} className="hover:text-accent">Legal</Link>
           </div>
         </div>
       </div>

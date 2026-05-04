@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
+import { getT } from '@/lib/i18n/t';
 
-export function EnquiryForm() {
-  const t = useTranslations('contact');
-  const f = useTranslations('contact.fields');
+export function EnquiryForm({ locale }: { locale: string }) {
+  const t = getT(locale, 'contact');
+  const f = getT(locale, 'contact.fields');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'done'>('idle');
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {

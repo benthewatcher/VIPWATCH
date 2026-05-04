@@ -13,7 +13,7 @@ function Content({ locale }: { locale: string }) {
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />
       <section className="mx-auto max-w-3xl px-6 pb-32">
-        <EnquiryForm />
+        <EnquiryForm locale={locale} />
       </section>
     </>
   );

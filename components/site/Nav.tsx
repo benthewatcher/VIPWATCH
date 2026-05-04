@@ -1,7 +1,8 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
-import { Link, usePathname } from '@/lib/i18n/navigation';
+import { getT } from '@/lib/i18n/t';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { useState } from 'react';
@@ -18,16 +19,23 @@ const items = [
   { key: 'contact', href: '/contact' },
 ] as const;
 
-export function Nav() {
-  const t = useTranslations('nav');
-  const tBrand = useTranslations('brand');
+export function Nav({ locale }: { locale: string }) {
+  const t = getT(locale, 'nav');
+  const tBrand = getT(locale, 'brand');
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  // pathname includes the locale prefix (e.g. /ar/services). Strip it for comparisons.
+  const stripped = pathname.startsWith(`/${locale}`)
+    ? pathname.slice(locale.length + 1) || '/'
+    : pathname;
+
+  const localized = (href: string) => `/${locale}${href === '/' ? '' : href}`;
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-bg-primary/70 border-b border-divider">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <Link href="/" className="font-serif text-xl tracking-[0.25em] uppercase">
+        <Link href={`/${locale}`} className="font-serif text-xl tracking-[0.25em] uppercase">
           {tBrand('name')}
         </Link>
 
@@ -35,16 +43,16 @@ export function Nav() {
           {items.map((item) => (
             <Link
               key={item.key}
-              href={item.href}
+              href={localized(item.href)}
               className={cn(
                 'text-xs uppercase tracking-[0.2em] text-text-muted hover:text-text-primary transition-colors',
-                pathname === item.href && 'text-text-primary',
+                stripped === item.href && 'text-text-primary',
               )}
             >
               {t(item.key)}
             </Link>
           ))}
-          <LocaleSwitcher />
+          <LocaleSwitcher locale={locale} />
           <ThemeToggle />
         </nav>
 
@@ -62,14 +70,17 @@ export function Nav() {
           {items.map((item) => (
             <Link
               key={item.key}
-              href={item.href}
+              href={localized(item.href)}
               onClick={() => setOpen(false)}
               className="text-sm uppercase tracking-[0.2em] text-text-muted hover:text-text-primary"
             >
               {t(item.key)}
             </Link>
           ))}
-          <div className="pt-2 flex items-center gap-4"><LocaleSwitcher /><ThemeToggle /></div>
+          <div className="pt-2 flex items-center gap-4">
+            <LocaleSwitcher locale={locale} />
+            <ThemeToggle />
+          </div>
         </nav>
       )}
     </header>

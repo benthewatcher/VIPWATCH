@@ -1,11 +1,54 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useRef, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { publicMediaUrl } from '@/lib/utils/storage';
-import { Upload, X, ArrowUp, ArrowDown } from 'lucide-react';
+import { Upload, X, ArrowUp, ArrowDown, Folder, Image as ImageIcon } from 'lucide-react';
 
 type GalleryImage = { id: string; url: string; position: number };
+
+const IMAGE_RE = /\.(jpe?g|png|webp|avif|gif|heic|heif|svg)$/i;
+
+/**
+ * Recursively walk a DataTransferItemList (drag-and-drop) and return all
+ * image File objects found inside, including nested folders.
+ */
+async function readDroppedItems(items: DataTransferItemList): Promise<File[]> {
+  const out: File[] = [];
+
+  async function readEntry(entry: FileSystemEntry | null): Promise<void> {
+    if (!entry) return;
+    if (entry.isFile) {
+      const fileEntry = entry as FileSystemFileEntry;
+      const file = await new Promise<File>((res, rej) => fileEntry.file(res, rej));
+      if (IMAGE_RE.test(file.name) || file.type.startsWith('image/')) out.push(file);
+      return;
+    }
+    if (entry.isDirectory) {
+      const reader = (entry as FileSystemDirectoryEntry).createReader();
+      // Directory readers return entries in batches; loop until empty.
+      while (true) {
+        const batch = await new Promise<FileSystemEntry[]>((res, rej) =>
+          reader.readEntries(res, rej),
+        );
+        if (batch.length === 0) break;
+        await Promise.all(batch.map(readEntry));
+      }
+    }
+  }
+
+  const entries: (FileSystemEntry | null)[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.kind !== 'file') continue;
+    // webkitGetAsEntry is the de-facto standard for folder drops
+    const entry = (item as DataTransferItem & { webkitGetAsEntry: () => FileSystemEntry | null })
+      .webkitGetAsEntry();
+    entries.push(entry);
+  }
+  await Promise.all(entries.map(readEntry));
+  return out;
+}
 
 export function CommissionGallery({
   commissionId,
@@ -25,28 +68,47 @@ export function CommissionGallery({
   const [images, setImages] = useState<GalleryImage[]>(initial);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [, startTransition] = useTransition();
+
+  // Refs for the two hidden inputs (file picker + folder picker)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   const sorted = useMemo(
     () => [...images].sort((a, b) => a.position - b.position),
     [images],
   );
 
-  async function onFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function uploadAll(files: File[]) {
+    if (files.length === 0) return;
+    // Filter to images only — folder picks may include other files
+    const imageFiles = files.filter(
+      (f) => IMAGE_RE.test(f.name) || f.type.startsWith('image/'),
+    );
+    if (imageFiles.length === 0) {
+      setErr('No image files found.');
+      return;
+    }
+
     setBusy(true);
     setErr(null);
+    setProgress({ done: 0, total: imageFiles.length });
+
     const supabase = createClient();
     const added: GalleryImage[] = [];
 
-    for (const file of Array.from(files)) {
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
       const ext = file.name.split('.').pop() || 'bin';
-      const path = `commissions/${slug}/gallery/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const path = `commissions/${slug}/gallery/${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
       const { error } = await supabase.storage
         .from('media')
-        .upload(path, file, { upsert: false, contentType: file.type });
+        .upload(path, file, { upsert: false, contentType: file.type || 'image/jpeg' });
       if (error) {
-        setErr(error.message);
+        setErr(`${file.name}: ${error.message}`);
+        setProgress({ done: i + 1, total: imageFiles.length });
         continue;
       }
       const stored = `media/${path}`;
@@ -54,14 +116,16 @@ export function CommissionGallery({
         const row = await addAction(commissionId, stored);
         added.push(row);
       } catch (e) {
-        setErr((e as Error).message);
+        setErr(`${file.name}: ${(e as Error).message}`);
       }
+      setProgress({ done: i + 1, total: imageFiles.length });
     }
 
     if (added.length > 0) {
       setImages((prev) => [...prev, ...added]);
     }
     setBusy(false);
+    setProgress(null);
   }
 
   function onRemove(imageId: string) {
@@ -86,7 +150,6 @@ export function CommissionGallery({
     });
   }
 
-  // Set explicit position on an image (e.g. from number input).
   function onPositionInput(imageId: string, raw: string) {
     const n = Number.parseInt(raw, 10);
     if (Number.isNaN(n)) return;
@@ -94,13 +157,11 @@ export function CommissionGallery({
     persistPosition(imageId, n);
   }
 
-  // Swap an image's position with its neighbour (up/down).
   function move(imageId: string, dir: -1 | 1) {
     const list = sorted;
     const idx = list.findIndex((i) => i.id === imageId);
     const swapIdx = idx + dir;
     if (idx < 0 || swapIdx < 0 || swapIdx >= list.length) return;
-
     const a = list[idx];
     const b = list[swapIdx];
     setImages((prev) =>
@@ -114,14 +175,72 @@ export function CommissionGallery({
     persistPosition(b.id, a.position);
   }
 
+  function onDragOver(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!busy) setDragging(true);
+  }
+
+  function onDragLeave(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+  }
+
+  async function onDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    if (busy) return;
+    const files = await readDroppedItems(e.dataTransfer.items);
+    if (files.length > 0) await uploadAll(files);
+  }
+
   return (
-    <div>
-      <div className="flex items-center justify-between">
+    <div onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Gallery</p>
-        <p className="text-xs text-text-muted">
-          {images.length} image{images.length === 1 ? '' : 's'}
-        </p>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            className="flex items-center gap-2 border border-divider px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+          >
+            <ImageIcon size={12} /> Add images
+          </button>
+          <button
+            type="button"
+            onClick={() => folderInputRef.current?.click()}
+            disabled={busy}
+            className="flex items-center gap-2 border border-divider px-3 py-1.5 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+          >
+            <Folder size={12} /> Add folder
+          </button>
+          <p className="text-xs text-text-muted">
+            {images.length} image{images.length === 1 ? '' : 's'}
+          </p>
+        </div>
       </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(e) => uploadAll(Array.from(e.target.files ?? []))}
+        className="hidden"
+      />
+      <input
+        ref={folderInputRef}
+        type="file"
+        // @ts-expect-error — webkitdirectory is a non-standard but widely-supported attribute
+        webkitdirectory=""
+        directory=""
+        multiple
+        onChange={(e) => uploadAll(Array.from(e.target.files ?? []))}
+        className="hidden"
+      />
 
       <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
         {sorted.map((img, i) => {
@@ -136,7 +255,6 @@ export function CommissionGallery({
                 <img src={url} alt="" className="absolute inset-0 w-full h-full object-cover" />
               )}
 
-              {/* Top-right: remove */}
               <button
                 type="button"
                 onClick={() => onRemove(img.id)}
@@ -146,7 +264,6 @@ export function CommissionGallery({
                 <X size={14} />
               </button>
 
-              {/* Bottom: position controls */}
               <div className="mt-auto bg-bg-primary/80 backdrop-blur-sm border-t border-divider p-2 flex items-center gap-1.5 z-10">
                 <button
                   type="button"
@@ -187,24 +304,37 @@ export function CommissionGallery({
           );
         })}
 
-        <label className="aspect-[3/4] flex flex-col items-center justify-center gap-2 border border-dashed border-divider bg-bg-secondary/50 text-text-muted text-xs cursor-pointer hover:border-accent hover:text-accent transition-colors p-4 text-center">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={busy}
+          className={`aspect-[3/4] flex flex-col items-center justify-center gap-2 border border-dashed text-xs cursor-pointer transition-colors p-4 text-center ${
+            dragging
+              ? 'border-accent bg-accent/10 text-accent'
+              : 'border-divider bg-bg-secondary/50 text-text-muted hover:border-accent hover:text-accent'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
           <Upload size={20} />
-          <span>{busy ? 'Uploading…' : 'Add images'}</span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            disabled={busy}
-            onChange={(e) => onFiles(e.target.files)}
-            className="hidden"
-          />
-        </label>
+          {busy && progress ? (
+            <span>
+              Uploading {progress.done}/{progress.total}…
+            </span>
+          ) : dragging ? (
+            <span>Drop to upload</span>
+          ) : (
+            <span>
+              Click, drag files,
+              <br />
+              or drag a folder here
+            </span>
+          )}
+        </button>
       </div>
 
       {err && <p className="mt-3 text-xs text-red-400">{err}</p>}
       {images.length === 0 && !busy && (
         <p className="mt-3 text-xs text-text-muted">
-          Save the commission first, then upload gallery images.
+          Save the commission first, then upload gallery images. Drag a whole folder onto the gallery to add everything inside.
         </p>
       )}
     </div>

@@ -1,7 +1,7 @@
 import { getT } from '@/lib/i18n/t';
 import { PageHeader } from '@/components/site/PageHeader';
 import { FadeUp } from '@/components/site/FadeUp';
-import { Link } from '@/lib/i18n/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';

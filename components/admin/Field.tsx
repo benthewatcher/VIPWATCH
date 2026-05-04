@@ -70,7 +70,7 @@ export function BilingualField({
       <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{label}</p>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
         <Field label="EN" name={`${field}_en`} defaultValue={en} textarea={textarea} rows={rows} required={required} />
-        <Field label="AR" name={`${field}_fr`} defaultValue={fr} textarea={textarea} rows={rows} required={required} dir="rtl" />
+        <Field label="AR (optional)" name={`${field}_fr`} defaultValue={fr} textarea={textarea} rows={rows} dir="rtl" />
       </div>
     </div>
   );

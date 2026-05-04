@@ -1,10 +1,21 @@
 'use client';
 
-import { useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import { Field, BilingualField } from './Field';
 import { ImageUpload } from './ImageUpload';
 import { generateCommissionCopy } from '@/lib/ai/generate-commission';
 import { Sparkles } from 'lucide-react';
+
+/** URL-safe slug: lowercase, dashes for whitespace, strip everything else. */
+function slugify(input: string): string {
+  return input
+    .normalize('NFKD')                    // strip accents (é → e)
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')          // any non-alphanumeric → dash
+    .replace(/^-+|-+$/g, '')              // trim leading/trailing dashes
+    .replace(/-+/g, '-');                 // collapse multi-dashes
+}
 
 export type CommissionRow = {
   id?: string;
@@ -37,10 +48,27 @@ export function CommissionForm({
   submitLabel: string;
   onDelete?: () => void | Promise<void>;
 }) {
-  const slug = row?.slug ?? '';
+  const initialSlug = row?.slug ?? '';
   const formRef = useRef<HTMLFormElement>(null);
   const [generating, startGenerate] = useTransition();
   const [genError, setGenError] = useState<string | null>(null);
+
+  // Slug auto-sync: derive from EN title until the user types in the slug field.
+  const [slug, setSlug] = useState(initialSlug);
+  const [slugDirty, setSlugDirty] = useState(!!initialSlug);
+
+  useEffect(() => {
+    const form = formRef.current;
+    if (!form) return;
+    const titleEn = form.elements.namedItem('title_en') as HTMLInputElement | null;
+    if (!titleEn) return;
+    function onTitleInput() {
+      if (slugDirty) return;
+      setSlug(slugify(titleEn!.value));
+    }
+    titleEn.addEventListener('input', onTitleInput);
+    return () => titleEn.removeEventListener('input', onTitleInput);
+  }, [slugDirty]);
 
   function handleGenerate(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
@@ -89,7 +117,23 @@ export function CommissionForm({
   return (
     <form ref={formRef} action={action} className="grid gap-8 max-w-4xl">
       <div className="grid gap-6 md:grid-cols-3">
-        <Field label="Slug" name="slug" defaultValue={slug} required placeholder="e.g. spider" />
+        <label className="block">
+          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">
+            Slug{!slugDirty && <span className="ml-2 text-text-muted/60 normal-case tracking-normal">(auto from title)</span>}
+          </span>
+          <input
+            name="slug"
+            value={slug}
+            onChange={(e) => {
+              setSlug(slugify(e.target.value));
+              setSlugDirty(true);
+            }}
+            required
+            placeholder="e.g. sapphire-daytona-box"
+            pattern="[a-z0-9-]+"
+            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
         <Field label="Position" name="position" type="number" defaultValue={row?.position ?? 0} />
         <label className="block">
           <span className="text-xs uppercase tracking-[0.2em] text-text-muted">Status</span>

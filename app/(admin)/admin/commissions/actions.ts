@@ -280,6 +280,17 @@ export async function deleteCommissionBlock(commissionId: string, blockId: strin
   revalidatePath('/[locale]/commissions/[slug]', 'page');
 }
 
+export async function setCommissionRelated(commissionId: string, relatedIds: string[]) {
+  const supabase = (await createClient()) as any;
+  const { error } = await supabase
+    .from('commissions')
+    .update({ related_commission_ids: relatedIds })
+    .eq('id', commissionId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/admin/commissions/${commissionId}`);
+  revalidatePath('/[locale]/commissions/[slug]', 'page');
+}
+
 export async function setCommissionBlockPosition(
   commissionId: string,
   blockId: string,

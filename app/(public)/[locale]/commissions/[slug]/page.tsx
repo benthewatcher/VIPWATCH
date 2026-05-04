@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
@@ -11,6 +12,55 @@ import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const supabase = createAnonClient();
+  const { data: row } = await supabase
+    .from('commissions')
+    .select('title_en, title_fr, summary_en, summary_fr, hero_image, card_image, watch_model')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle();
+  if (!row) return { title: 'Commission not found' };
+
+  const loc = locale as Locale;
+  const title = pickLocale(row, 'title', loc) ?? '';
+  const description = pickLocale(row, 'summary', loc) ?? row.watch_model ?? '';
+  const ogImage = publicMediaUrl(row.hero_image ?? row.card_image) ?? undefined;
+  const fullTitle = `${title} — VIP WATCH`;
+  const url = `/${locale}/commissions/${slug}`;
+
+  return {
+    title: fullTitle,
+    description,
+    alternates: {
+      canonical: url,
+      languages: {
+        en: `/en/commissions/${slug}`,
+        ar: `/ar/commissions/${slug}`,
+      },
+    },
+    openGraph: {
+      type: 'article',
+      title: fullTitle,
+      description,
+      url,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+      locale,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: fullTitle,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+  };
+}
 
 export async function generateStaticParams() {
   const supabase = createAnonClient();
@@ -46,13 +96,38 @@ async function getCommission(slug: string) {
     .eq('commission_id', row.id)
     .eq('hidden', false)
     .order('position');
-  const { data: more } = await supabase
-    .from('commissions')
-    .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
-    .eq('status', 'published')
-    .neq('id', row.id)
-    .order('position', { ascending: true })
-    .limit(3);
+  // Manual related list takes precedence; fall back to auto (next 3 by position).
+  const relatedIds = ((row as any).related_commission_ids ?? []) as string[];
+  let more: Array<{
+    id: string;
+    slug: string;
+    title_en: string | null;
+    title_fr: string | null;
+    watch_model: string | null;
+    hero_image: string | null;
+    card_image: string | null;
+  }> = [];
+  if (relatedIds.length > 0) {
+    const { data } = await supabase
+      .from('commissions')
+      .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
+      .eq('status', 'published')
+      .in('id', relatedIds);
+    // Preserve the curator's order.
+    const byId = new Map((data ?? []).map((c) => [c.id, c]));
+    more = relatedIds
+      .map((id) => byId.get(id))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+  } else {
+    const { data } = await supabase
+      .from('commissions')
+      .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
+      .eq('status', 'published')
+      .neq('id', row.id)
+      .order('position', { ascending: true })
+      .limit(3);
+    more = data ?? [];
+  }
   type Block = {
     id: string;
     position: number;
@@ -64,7 +139,7 @@ async function getCommission(slug: string) {
     alt_en: string | null;
     alt_fr: string | null;
   };
-  return { row, gallery: gallery ?? [], blocks: (blocks ?? []) as Block[], more: more ?? [] };
+  return { row, gallery: gallery ?? [], blocks: (blocks ?? []) as Block[], more };
 }
 
 export default async function CommissionDetail({
@@ -80,11 +155,27 @@ export default async function CommissionDetail({
 
   const title = pickLocale(row, 'title', loc) ?? '';
   const summary = pickLocale(row, 'summary', loc);
-  const body = pickLocale(row, 'body', loc);
   const heroUrl = publicMediaUrl(row.hero_image);
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CreativeWork',
+    headline: title,
+    description: summary ?? '',
+    image: heroUrl ?? undefined,
+    inLanguage: loc,
+    about: row.watch_model ?? undefined,
+    author: { '@type': 'Organization', name: 'VIP WATCH' },
+    url: `/${loc}/commissions/${slug}`,
+  };
 
   return (
     <article>
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Hero image={heroUrl ?? undefined} alt={title}>
         <FadeUp>
           {row.watch_model && (
@@ -97,7 +188,7 @@ export default async function CommissionDetail({
         </FadeUp>
       </Hero>
 
-      {blocks.length > 0 ? (
+      {blocks.length > 0 && (
         <div className="py-24 md:py-32 grid gap-20">
           {blocks.map((block) => {
             if (block.type === 'paragraph') {
@@ -154,16 +245,6 @@ export default async function CommissionDetail({
             return null;
           })}
         </div>
-      ) : (
-        body && (
-          <section className="mx-auto max-w-3xl px-6 py-24 md:py-32">
-            <FadeUp>
-              <div className="font-serif text-2xl md:text-3xl leading-snug whitespace-pre-line">
-                {body}
-              </div>
-            </FadeUp>
-          </section>
-        )
       )}
 
       {gallery.length > 0 && (

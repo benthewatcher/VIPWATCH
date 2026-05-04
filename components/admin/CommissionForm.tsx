@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Field, BilingualField } from './Field';
 import { ImageUpload } from './ImageUpload';
 import { generateCommissionCopy } from '@/lib/ai/generate-commission';
+import { regenerateSummary } from '@/lib/ai/regenerate-paragraph';
 import { Sparkles } from 'lucide-react';
 
 /** URL-safe slug: lowercase, dashes for whitespace, strip everything else. */
@@ -50,7 +51,7 @@ export function CommissionForm({
 }) {
   const initialSlug = row?.slug ?? '';
   const formRef = useRef<HTMLFormElement>(null);
-  const [generating, startGenerate] = useTransition();
+  const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
   // Slug auto-sync: derive from EN title until the user types in the slug field.
@@ -88,7 +89,8 @@ export function CommissionForm({
       return;
     }
 
-    startGenerate(async () => {
+    setGenerating(true);
+    (async () => {
       try {
         const copy = await generateCommissionCopy(ctx);
         const set = (name: string, value: string) => {
@@ -110,8 +112,10 @@ export function CommissionForm({
         setGenError(
           err instanceof Error ? err.message : 'Generation failed. Try again.',
         );
+      } finally {
+        setGenerating(false);
       }
-    });
+    })();
   }
 
   return (
@@ -201,8 +205,11 @@ export function CommissionForm({
       </div>
       {genError && <p className="text-xs text-red-400 -mt-4">{genError}</p>}
 
-      <BilingualField label="Summary" field="summary" row={row as Record<string, unknown> | null} textarea rows={2} />
-      <BilingualField label="Body / narrative" field="body" row={row as Record<string, unknown> | null} textarea rows={10} />
+      <SummaryWithRewrite row={row} formRef={formRef} />
+
+      <p className="text-xs text-text-muted -mt-4">
+        Add the story and images below in <em>Body sections</em> after saving.
+      </p>
 
       <div className="flex items-center gap-3 pt-4 border-t border-divider">
         <button
@@ -224,5 +231,92 @@ export function CommissionForm({
         )}
       </div>
     </form>
+  );
+}
+
+function SummaryWithRewrite({
+  row,
+  formRef,
+}: {
+  row: CommissionRow | null;
+  formRef: React.RefObject<HTMLFormElement | null>;
+}) {
+  const enRef = useRef<HTMLTextAreaElement>(null);
+  const frRef = useRef<HTMLTextAreaElement>(null);
+  const [instruction, setInstruction] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function rewrite() {
+    setErr(null);
+    setBusy(true);
+    try {
+      const form = formRef.current;
+      const data = form ? new FormData(form) : null;
+      const result = await regenerateSummary({
+        title_en: (data?.get('title_en') as string) || row?.title_en || null,
+        watch_model: (data?.get('watch_model') as string) || row?.watch_model || null,
+        client_initials: (data?.get('client_initials') as string) || row?.client_initials || null,
+        // We don't have access to block content in this component yet; the action
+        // will work fine without it and just lean on title/watch/client.
+        body_paragraphs_en: [],
+        current_summary_en: enRef.current?.value ?? row?.summary_en ?? null,
+        instruction: instruction || null,
+      });
+      if (enRef.current) enRef.current.value = result.summary_en;
+      if (frRef.current) frRef.current.value = result.summary_fr;
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-[0.2em] text-text-muted">
+        Summary <span className="ml-2 text-text-muted/60 normal-case tracking-normal">(SEO description + hero subtitle)</span>
+      </p>
+      <div className="mt-2 grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">EN</span>
+          <textarea
+            ref={enRef}
+            name="summary_en"
+            rows={2}
+            defaultValue={row?.summary_en ?? ''}
+            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">AR (optional)</span>
+          <textarea
+            ref={frRef}
+            name="summary_fr"
+            rows={2}
+            dir="rtl"
+            defaultValue={(row as { summary_fr?: string | null } | null)?.summary_fr ?? ''}
+            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+      </div>
+      <div className="mt-3 flex gap-2 items-stretch">
+        <input
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          placeholder="Optional instruction for rewrite (e.g. 'shorter, lead with the watch')"
+          className="flex-1 bg-bg-primary border border-divider px-3 py-2 text-xs focus:border-accent outline-none"
+        />
+        <button
+          type="button"
+          onClick={rewrite}
+          disabled={busy}
+          className="flex items-center gap-2 border border-divider px-3 py-2 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+        >
+          <Sparkles size={12} /> {busy ? 'Rewriting…' : 'Rewrite'}
+        </button>
+      </div>
+      {err && <p className="mt-2 text-xs text-red-400">{err}</p>}
+    </div>
   );
 }

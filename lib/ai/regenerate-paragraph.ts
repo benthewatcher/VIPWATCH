@@ -5,29 +5,21 @@ import { BRAND_VOICE } from './voice';
 
 const anthropic = new Anthropic();
 
-export type RegenerateInput = {
-  /** Title (EN) of the commission. */
-  title_en?: string | null;
-  watch_model?: string | null;
-  client_initials?: string | null;
-  /** Body text of paragraphs that come BEFORE this one, in order. */
-  preceding_paragraphs_en: string[];
-  /** Current text of the paragraph to rewrite. May be empty if creating new. */
-  current_en: string | null;
-  /** Free-text instruction from the user, e.g. "make it shorter, lean into the colour". */
-  instruction?: string | null;
-};
-
-export type RegenerateOutput = {
-  body_en: string;
-  body_fr: string;
-};
-
 /**
  * Rewrite a single paragraph in the locked VIP WATCH voice using Haiku 4.5.
  * Brand voice prefix is prompt-cached. Returns EN + AR rewrites.
+ *
+ * Note: 'use server' files can only export async functions, so input/output
+ * types are inlined here rather than exported.
  */
-export async function regenerateParagraph(input: RegenerateInput): Promise<RegenerateOutput> {
+export async function regenerateParagraph(input: {
+  title_en?: string | null;
+  watch_model?: string | null;
+  client_initials?: string | null;
+  preceding_paragraphs_en: string[];
+  current_en: string | null;
+  instruction?: string | null;
+}): Promise<{ body_en: string; body_fr: string }> {
   const ctxLines = [
     input.title_en ? `Title: ${input.title_en}` : null,
     input.watch_model ? `Watch: ${input.watch_model}` : null,
@@ -94,5 +86,80 @@ Plain text. No Markdown. Keep paragraph length similar to surrounding paragraphs
   return {
     body_en: parsed.body_en,
     body_fr: parsed.body_fr ?? '',
+  };
+}
+
+/**
+ * Rewrite the SUMMARY for a commission — short, 1-2 sentences, in the brand
+ * voice. Uses the body paragraphs as context so the summary matches the story.
+ */
+export async function regenerateSummary(input: {
+  title_en?: string | null;
+  watch_model?: string | null;
+  client_initials?: string | null;
+  body_paragraphs_en: string[];
+  current_summary_en: string | null;
+  instruction?: string | null;
+}): Promise<{ summary_en: string; summary_fr: string }> {
+  const ctxLines = [
+    input.title_en ? `Title: ${input.title_en}` : null,
+    input.watch_model ? `Watch: ${input.watch_model}` : null,
+    input.client_initials ? `Client: ${input.client_initials}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const story = input.body_paragraphs_en.length
+    ? input.body_paragraphs_en.join('\n\n')
+    : '(no body paragraphs yet)';
+
+  const userMessage = `Write a SUMMARY for this VIP WATCH commission, in the voice you've been given.
+
+Commission context:
+${ctxLines || '(no context provided)'}
+
+The body story (use this as the source of truth for what the commission is about):
+${story}
+
+${input.current_summary_en?.trim() ? `Current summary: ${input.current_summary_en}` : ''}
+${input.instruction?.trim() ? `Instruction: ${input.instruction}` : ''}
+
+The summary appears in the page hero subtitle, the meta description tag, and link previews. Keep it to 1-2 short sentences. No headlines, no marketing fluff. Tonal continuity with the body.
+
+Return JSON only: {"summary_en": "...", "summary_fr": "..."}
+
+Plain text. No Markdown.`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 800,
+    system: [
+      {
+        type: 'text',
+        text: BRAND_VOICE,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [{ role: 'user', content: userMessage }],
+  });
+
+  const text = response.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+    .trim();
+  const cleaned = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+
+  let parsed: { summary_en?: string; summary_fr?: string };
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    throw new Error('Model did not return valid JSON.');
+  }
+  if (!parsed.summary_en) throw new Error('Model returned empty summary_en.');
+
+  return {
+    summary_en: parsed.summary_en,
+    summary_fr: parsed.summary_fr ?? '',
   };
 }

@@ -1,5 +1,4 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getT } from '@/lib/i18n/t';
 import { PageHeader } from '@/components/site/PageHeader';
 import { FadeUp } from '@/components/site/FadeUp';
 import { Link } from '@/lib/i18n/navigation';
@@ -23,13 +22,12 @@ type Step = { id: string; number: string; position: number; title_en: string; ti
 
 export default async function ProcessPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
   const steps = await getSteps();
   return <Content locale={locale as Locale} steps={steps} />;
 }
 
 function Content({ locale, steps }: { locale: Locale; steps: Step[] }) {
-  const t = useTranslations('process');
+  const t = getT(locale, 'process');
   return (
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />

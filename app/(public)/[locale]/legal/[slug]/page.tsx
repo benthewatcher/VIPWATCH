@@ -1,4 +1,3 @@
-import { setRequestLocale } from 'next-intl/server';
 
 export default async function LegalPage({
   params,
@@ -6,7 +5,6 @@ export default async function LegalPage({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  setRequestLocale(locale);
   return (
     <article className="mx-auto max-w-3xl px-6 py-32">
       <h1 className="font-serif text-4xl">{slug}</h1>

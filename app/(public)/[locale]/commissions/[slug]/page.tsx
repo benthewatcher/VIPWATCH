@@ -1,5 +1,4 @@
 import { notFound } from 'next/navigation';
-import { setRequestLocale } from 'next-intl/server';
 import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
@@ -48,7 +47,6 @@ export default async function CommissionDetail({
   params: Promise<{ locale: string; slug: string }>;
 }) {
   const { locale, slug } = await params;
-  setRequestLocale(locale);
   const result = await getCommission(slug);
   if (!result) notFound();
   const { row, gallery } = result;

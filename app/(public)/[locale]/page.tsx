@@ -1,4 +1,3 @@
-import { setRequestLocale } from 'next-intl/server';
 import { Link } from '@/lib/i18n/navigation';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
@@ -8,13 +7,12 @@ import { getHomePage, getFeaturedCommissions, getServicesForGrid } from '@/lib/q
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
-import { useTranslations } from 'next-intl';
+import { getT } from '@/lib/i18n/t';
 
 export const revalidate = 60;
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
   const [page, featured, services] = await Promise.all([
     getHomePage(),
     getFeaturedCommissions(3),
@@ -31,7 +29,7 @@ type HomeProps = {
 };
 
 function Home({ locale, page, featured, services }: HomeProps) {
-  const t = useTranslations('home');
+  const t = getT(locale, 'home');
   const heroHeading = pickLocale(page, 'hero_heading', locale) ?? t('heroHeading');
   const intro = pickLocale(page, 'body', locale) ?? t('intro');
   const ctaLabel = pickLocale(page, 'hero_cta_label', locale) ?? t('heroCta');

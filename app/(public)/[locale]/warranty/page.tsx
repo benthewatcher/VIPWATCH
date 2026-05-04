@@ -1,15 +1,13 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getT } from '@/lib/i18n/t';
 import { PageHeader } from '@/components/site/PageHeader';
 
 export default async function Page({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
-  return <Content />;
+  return <Content locale={locale} />;
 }
 
-function Content() {
-  const t = useTranslations('warranty');
+function Content({ locale }: { locale: string }) {
+  const t = getT(locale, 'warranty');
   return (
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />

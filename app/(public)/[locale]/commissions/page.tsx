@@ -1,5 +1,4 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getT } from '@/lib/i18n/t';
 import { PageHeader } from '@/components/site/PageHeader';
 import { CommissionCard } from '@/components/site/CommissionCard';
 import { FadeUp } from '@/components/site/FadeUp';
@@ -23,7 +22,6 @@ async function getCommissions() {
 
 export default async function CommissionsIndex({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
   const items = await getCommissions();
   return <Content locale={locale as Locale} items={items} />;
 }
@@ -35,7 +33,7 @@ function Content({
   locale: Locale;
   items: Array<{ id: string; slug: string; card_image: string | null; hero_image: string | null; title_en: string; title_fr: string; watch_model: string | null }>;
 }) {
-  const t = useTranslations('commissions');
+  const t = getT(locale, 'commissions');
   return (
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />

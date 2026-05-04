@@ -1,5 +1,4 @@
-import { useTranslations } from 'next-intl';
-import { setRequestLocale } from 'next-intl/server';
+import { getT } from '@/lib/i18n/t';
 import * as Icons from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { PageHeader } from '@/components/site/PageHeader';
@@ -40,13 +39,12 @@ async function getServices() {
 
 export default async function ServicesPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  setRequestLocale(locale);
   const services = await getServices();
   return <Content locale={locale as Locale} services={services} />;
 }
 
 function Content({ locale, services }: { locale: Locale; services: ServiceRow[] }) {
-  const t = useTranslations('services');
+  const t = getT(locale, 'services');
   return (
     <>
       <PageHeader title={t('title')} subtitle={t('subtitle')} />

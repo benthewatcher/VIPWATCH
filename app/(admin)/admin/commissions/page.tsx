@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { publicMediaUrl } from '@/lib/utils/storage';
+import { duplicateCommission } from './actions';
 
 export const metadata = { title: 'Commissions' };
 
@@ -74,6 +75,14 @@ export default async function CommissionsAdmin() {
                             View ↗
                           </a>
                         )}
+                        <form action={duplicateCommission.bind(null, c.id)}>
+                          <button
+                            type="submit"
+                            className="text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"
+                          >
+                            Duplicate
+                          </button>
+                        </form>
                         <Link
                           href={`/admin/commissions/${c.id}`}
                           className="text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"

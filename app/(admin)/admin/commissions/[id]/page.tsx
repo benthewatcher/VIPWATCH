@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 import {
   updateCommission,
   deleteCommission,
+  duplicateCommission,
   addCommissionImage,
   deleteCommissionImage,
   setCommissionImagePosition,
@@ -44,16 +45,26 @@ export default async function EditCommissionPage({ params }: { params: Promise<{
         title={row.title_en ?? 'Edit commission'}
         back={{ href: '/admin/commissions', label: 'Commissions' }}
         actions={
-          row.status === 'published' && row.slug ? (
-            <a
-              href={`/en/commissions/${row.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-accent px-4 py-2 text-xs uppercase tracking-[0.2em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
-            >
-              View live ↗
-            </a>
-          ) : null
+          <>
+            <form action={duplicateCommission.bind(null, id)}>
+              <button
+                type="submit"
+                className="border border-divider px-4 py-2 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors"
+              >
+                Duplicate
+              </button>
+            </form>
+            {row.status === 'published' && row.slug && (
+              <a
+                href={`/en/commissions/${row.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="border border-accent px-4 py-2 text-xs uppercase tracking-[0.2em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
+              >
+                View live ↗
+              </a>
+            )}
+          </>
         }
       />
       <main className="p-10 grid gap-12">

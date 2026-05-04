@@ -63,6 +63,8 @@ async function getCommission(slug: string) {
     alt_en: string | null;
     alt_fr: string | null;
   };
+  // TEMP debug: log what reaches the renderer
+  console.log('[commission detail] blocks:', JSON.stringify(blocks, null, 2));
   return { row, gallery: gallery ?? [], blocks: (blocks ?? []) as Block[], more: more ?? [] };
 }
 

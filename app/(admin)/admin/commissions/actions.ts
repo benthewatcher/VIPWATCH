@@ -106,6 +106,71 @@ export async function deleteCommission(id: string) {
   redirect('/admin/commissions');
 }
 
+export async function duplicateCommission(id: string) {
+  const supabase = await createClient();
+  const { data: src, error: srcErr } = await supabase
+    .from('commissions')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (srcErr || !src) throw new Error(srcErr?.message ?? 'Source commission not found');
+
+  // Build a unique slug by suffixing -copy, -copy-2, etc.
+  const baseSlug = `${src.slug}-copy`;
+  let candidate = baseSlug;
+  for (let i = 2; i < 100; i++) {
+    const { data: existing } = await supabase
+      .from('commissions')
+      .select('id')
+      .eq('slug', candidate)
+      .maybeSingle();
+    if (!existing) break;
+    candidate = `${baseSlug}-${i}`;
+  }
+
+  const {
+    id: _id,
+    created_at: _createdAt,
+    updated_at: _updatedAt,
+    published_at: _publishedAt,
+    slug: _slug,
+    status: _status,
+    is_featured: _isFeatured,
+    title_en,
+    ...rest
+  } = src as Record<string, unknown> & { title_en?: string | null };
+
+  const { data: inserted, error: insErr } = await (supabase as any)
+    .from('commissions')
+    .insert({
+      ...rest,
+      slug: candidate,
+      title_en: title_en ? `${title_en} (copy)` : 'Untitled (copy)',
+      status: 'draft',
+      is_featured: false,
+      published_at: null,
+    })
+    .select('id')
+    .single();
+  if (insErr || !inserted) throw new Error(insErr?.message ?? 'Failed to duplicate commission');
+
+  // Copy blocks (commission_blocks isn't in generated types yet)
+  const sb = supabase as any;
+  const { data: srcBlocks } = await sb
+    .from('commission_blocks')
+    .select('position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+    .eq('commission_id', id)
+    .order('position');
+  if (srcBlocks && srcBlocks.length > 0) {
+    await sb
+      .from('commission_blocks')
+      .insert(srcBlocks.map((b: Record<string, unknown>) => ({ ...b, commission_id: inserted.id })));
+  }
+
+  revalidatePath('/admin/commissions');
+  redirect(`/admin/commissions/${inserted.id}`);
+}
+
 // Gallery image actions
 export async function addCommissionImage(commissionId: string, url: string) {
   const supabase = await createClient();

@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 
 const items = [
   { key: 'commissions', href: '/commissions' },
+  { key: 'collections', href: '/collections' },
   { key: 'services', href: '/services' },
   { key: 'process', href: '/process' },
   { key: 'artsAndCrafts', href: '/arts-and-crafts' },

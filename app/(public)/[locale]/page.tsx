@@ -3,7 +3,7 @@ import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { SectionIntro } from '@/components/site/SectionIntro';
 import { CommissionCard } from '@/components/site/CommissionCard';
-import { getHomePage, getFeaturedCommissions, getServicesForGrid } from '@/lib/queries/home';
+import { getHomePage, getFeaturedCommissions, getServicesForGrid, getFeaturedCollections } from '@/lib/queries/home';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
@@ -13,12 +13,13 @@ export const revalidate = 60;
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const [page, featured, services] = await Promise.all([
+  const [page, featured, services, collections] = await Promise.all([
     getHomePage(),
     getFeaturedCommissions(3),
     getServicesForGrid(4),
+    getFeaturedCollections(2),
   ]);
-  return <Home locale={locale as Locale} page={page} featured={featured} services={services} />;
+  return <Home locale={locale as Locale} page={page} featured={featured} services={services} collections={collections} />;
 }
 
 type HomeProps = {
@@ -26,9 +27,10 @@ type HomeProps = {
   page: Record<string, unknown> | null;
   featured: Array<{ id: string; slug: string; card_image: string | null; hero_image: string | null; title_en: string; title_fr: string; watch_model: string | null }>;
   services: Array<{ id: string; slug: string; title_en: string; title_fr: string; position: number }>;
+  collections: Array<{ id: string; slug: string; name_en: string | null; name_fr: string | null; project_en: string | null; project_fr: string | null; cover_image: string | null; position: number }>;
 };
 
-function Home({ locale, page, featured, services }: HomeProps) {
+function Home({ locale, page, featured, services, collections }: HomeProps) {
   const t = getT(locale, 'home');
   const heroHeading = pickLocale(page, 'hero_heading', locale) ?? t('heroHeading');
   const intro = pickLocale(page, 'body', locale) ?? t('intro');
@@ -76,6 +78,50 @@ function Home({ locale, page, featured, services }: HomeProps) {
                 />
               </FadeUp>
             ))}
+          </div>
+        </section>
+      )}
+
+      {collections.length > 0 && (
+        <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32">
+          <SectionIntro
+            eyebrow="02"
+            heading={locale === 'ar' ? 'مجموعات منسّقة' : 'Curated collections'}
+            cta={{
+              label: locale === 'ar' ? 'كل المجموعات' : 'All collections',
+              href: `/${locale}/collections`,
+            }}
+          />
+          <div className="mt-16 grid gap-8 md:grid-cols-2">
+            {collections.map((c, i) => {
+              const img = publicMediaUrl(c.cover_image);
+              const name = pickLocale(c, 'name', locale) ?? '';
+              const project = pickLocale(c, 'project', locale);
+              return (
+                <FadeUp key={c.id} delay={i * 0.1}>
+                  <Link href={`/${locale}/collections/${c.slug}`} className="group block">
+                    <div className="relative aspect-[16/10] overflow-hidden bg-bg-secondary border border-divider">
+                      {img && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={img}
+                          alt={name}
+                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        />
+                      )}
+                    </div>
+                    <div className="mt-4">
+                      {project && (
+                        <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{project}</p>
+                      )}
+                      <h3 className="font-serif text-3xl mt-1 group-hover:text-accent transition-colors">
+                        {name}
+                      </h3>
+                    </div>
+                  </Link>
+                </FadeUp>
+              );
+            })}
           </div>
         </section>
       )}

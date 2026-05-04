@@ -28,3 +28,24 @@ export async function getServicesForGrid(limit = 4) {
     .limit(limit);
   return data ?? [];
 }
+
+export async function getFeaturedCollections(limit = 2) {
+  const supabase = (await createClient()) as any;
+  const { data } = await supabase
+    .from('commission_collections')
+    .select('id, slug, name_en, name_fr, project_en, project_fr, cover_image, position')
+    .eq('is_private', false)
+    .eq('is_featured', true)
+    .order('position', { ascending: true })
+    .limit(limit);
+  return (data ?? []) as Array<{
+    id: string;
+    slug: string;
+    name_en: string | null;
+    name_fr: string | null;
+    project_en: string | null;
+    project_fr: string | null;
+    cover_image: string | null;
+    position: number;
+  }>;
+}

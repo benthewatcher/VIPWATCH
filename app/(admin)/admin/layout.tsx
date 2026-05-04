@@ -4,8 +4,10 @@ import { signOut } from './actions';
 
 const adminNav = [
   { label: 'Dashboard', href: '/admin' },
+  { label: 'Home page', href: '/admin/home' },
   { label: 'Commissions', href: '/admin/commissions' },
   { label: 'Collections', href: '/admin/collections' },
+  { label: 'Departments', href: '/admin/departments' },
   { label: 'Services', href: '/admin/services' },
   { label: 'Process', href: '/admin/process' },
   { label: 'Pages', href: '/admin/pages' },

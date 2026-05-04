@@ -5,6 +5,7 @@ import { createAnonClient } from '@/lib/supabase/anon';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
+import { ThemeForce } from '@/components/site/ThemeForce';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
@@ -82,7 +83,7 @@ export default async function CollectionDetail({
 
   const { data: row } = await supabase
     .from('commission_collections')
-    .select('id, slug, name_en, name_fr, project_en, project_fr, description_en, description_fr, cover_image, is_private')
+    .select('id, slug, name_en, name_fr, project_en, project_fr, description_en, description_fr, cover_image, is_private, theme')
     .eq('slug', slug)
     .eq('is_private', false)
     .maybeSingle();
@@ -133,6 +134,7 @@ export default async function CollectionDetail({
 
   return (
     <article>
+      <ThemeForce theme={(row as { theme?: 'system' | 'light' | 'dark' }).theme ?? 'system'} />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger

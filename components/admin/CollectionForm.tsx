@@ -86,6 +86,18 @@ export function CollectionForm({
             <input type="checkbox" name="is_featured" defaultChecked={!!row?.is_featured} />
             Featured on home
           </label>
+          <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-text-muted">
+            Theme
+            <select
+              name="theme"
+              defaultValue={(row as { theme?: string } | null)?.theme ?? 'system'}
+              className="bg-bg-secondary border border-divider px-2 py-1 text-xs normal-case tracking-normal"
+            >
+              <option value="system">System</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </label>
         </div>
       </div>
 

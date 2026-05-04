@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
+import { ThemeForce } from '@/components/site/ThemeForce';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { createAnonClient } from '@/lib/supabase/anon';
@@ -171,6 +172,7 @@ export default async function CommissionDetail({
 
   return (
     <article>
+      <ThemeForce theme={(row as { theme?: 'system' | 'light' | 'dark' }).theme ?? 'system'} />
       <script
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger

@@ -19,6 +19,7 @@ const commissionSchema = z.object({
   title_en: z.string().min(1),
   // _fr columns are NOT NULL in the DB; default to '' until a migration relaxes them.
   title_fr: z.string().default(''),
+  theme: z.enum(['system', 'light', 'dark']).default('system'),
   summary_en: z.string().nullable().optional(),
   summary_fr: z.string().default(''),
   body_en: z.string().nullable().optional(),
@@ -44,6 +45,7 @@ function parse(form: FormData) {
     summary_fr: (form.get('summary_fr') as string) || '',
     body_en: form.get('body_en') || null,
     body_fr: (form.get('body_fr') as string) || '',
+    theme: (form.get('theme') as string) || 'system',
   });
 }
 
@@ -56,7 +58,7 @@ export async function createCommission(form: FormData) {
     body_fr: data.body_fr ?? '',
     published_at: data.status === 'published' ? new Date().toISOString() : null,
   };
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
   const { data: row, error } = await supabase.from('commissions').insert(payload).select('id').single();
   if (error) throw new Error(error.message);
   revalidatePath('/admin/commissions');
@@ -67,7 +69,7 @@ export async function createCommission(form: FormData) {
 
 export async function updateCommission(id: string, form: FormData) {
   const data = parse(form);
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
 
   // If transitioning to published, set published_at if missing.
   const { data: existing } = await supabase

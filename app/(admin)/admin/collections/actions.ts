@@ -17,6 +17,7 @@ const collectionSchema = z.object({
   is_private: z.coerce.boolean().default(false),
   is_featured: z.coerce.boolean().default(false),
   position: z.coerce.number().int().default(0),
+  theme: z.enum(['system', 'light', 'dark']).default('system'),
 });
 
 function parse(form: FormData) {
@@ -32,6 +33,7 @@ function parse(form: FormData) {
     is_private: form.get('is_private') === 'on' || form.get('is_private') === 'true',
     is_featured: form.get('is_featured') === 'on' || form.get('is_featured') === 'true',
     position: form.get('position') || 0,
+    theme: (form.get('theme') as string) || 'system',
   });
 }
 

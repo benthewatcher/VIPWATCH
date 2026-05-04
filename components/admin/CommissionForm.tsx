@@ -159,15 +159,29 @@ export function CommissionForm({
         <Field label="Year started" name="year_started" type="number" defaultValue={row?.year_started ?? ''} placeholder="2024" />
       </div>
 
-      <label className="flex items-center gap-3 text-sm">
-        <input
-          type="checkbox"
-          name="is_featured"
-          defaultChecked={!!row?.is_featured}
-          className="accent-accent w-4 h-4"
-        />
-        <span>Feature on home page</span>
-      </label>
+      <div className="flex items-center gap-8 flex-wrap">
+        <label className="flex items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            name="is_featured"
+            defaultChecked={!!row?.is_featured}
+            className="accent-accent w-4 h-4"
+          />
+          <span>Feature on home page</span>
+        </label>
+        <label className="flex items-center gap-3 text-sm">
+          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">Page theme</span>
+          <select
+            name="theme"
+            defaultValue={(row as { theme?: string } | null)?.theme ?? 'system'}
+            className="bg-bg-secondary border border-divider px-2 py-1 text-sm"
+          >
+            <option value="system">System (visitor&rsquo;s choice)</option>
+            <option value="light">Force light</option>
+            <option value="dark">Force dark</option>
+          </select>
+        </label>
+      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <ImageUpload

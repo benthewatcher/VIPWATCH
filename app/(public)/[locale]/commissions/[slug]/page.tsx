@@ -42,8 +42,9 @@ async function getCommission(slug: string) {
   // commission_blocks isn't in generated supabase types yet — cast.
   const { data: blocks } = await (supabase as any)
     .from('commission_blocks')
-    .select('id, position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+    .select('id, position, type, hidden, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
     .eq('commission_id', row.id)
+    .eq('hidden', false)
     .order('position');
   const { data: more } = await supabase
     .from('commissions')
@@ -63,8 +64,6 @@ async function getCommission(slug: string) {
     alt_en: string | null;
     alt_fr: string | null;
   };
-  // TEMP debug: log what reaches the renderer
-  console.log('[commission detail] blocks:', JSON.stringify(blocks, null, 2));
   return { row, gallery: gallery ?? [], blocks: (blocks ?? []) as Block[], more: more ?? [] };
 }
 
@@ -121,9 +120,14 @@ export default async function CommissionDetail({
               return (
                 <section key={block.id} className="mx-auto max-w-5xl px-6">
                   <FadeUp>
-                    <div className="relative aspect-[3/2] bg-bg-secondary overflow-hidden">
-                      <Image src={url} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 1024px) 1024px, 100vw" />
-                    </div>
+                    <Image
+                      src={url}
+                      alt={alt}
+                      width={1600}
+                      height={1067}
+                      className="w-full h-auto bg-bg-secondary"
+                      sizes="(min-width: 1024px) 1024px, 100vw"
+                    />
                   </FadeUp>
                 </section>
               );
@@ -137,14 +141,10 @@ export default async function CommissionDetail({
                   <FadeUp>
                     <div className="grid gap-4 md:grid-cols-2">
                       {url1 && (
-                        <div className="relative aspect-[3/4] bg-bg-secondary overflow-hidden">
-                          <Image src={url1} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
-                        </div>
+                        <Image src={url1} alt={alt} width={900} height={1200} className="w-full h-auto bg-bg-secondary" sizes="(min-width: 768px) 50vw, 100vw" />
                       )}
                       {url2 && (
-                        <div className="relative aspect-[3/4] bg-bg-secondary overflow-hidden">
-                          <Image src={url2} alt={alt} fill quality={90} className="object-cover" sizes="(min-width: 768px) 50vw, 100vw" />
-                        </div>
+                        <Image src={url2} alt={alt} width={900} height={1200} className="w-full h-auto bg-bg-secondary" sizes="(min-width: 768px) 50vw, 100vw" />
                       )}
                     </div>
                   </FadeUp>

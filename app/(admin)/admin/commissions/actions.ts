@@ -223,6 +223,7 @@ export type CommissionBlockRow = {
   id: string;
   position: number;
   type: CommissionBlockType;
+  hidden: boolean;
   body_en: string | null;
   body_fr: string | null;
   image_url: string | null;
@@ -248,7 +249,7 @@ export async function addCommissionBlock(
   const { data, error } = await supabase
     .from('commission_blocks')
     .insert({ commission_id: commissionId, type, position: nextPosition })
-    .select('id, position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+    .select('id, position, type, hidden, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
     .single();
   if (error) throw new Error(error.message);
   revalidatePath(`/admin/commissions/${commissionId}`);

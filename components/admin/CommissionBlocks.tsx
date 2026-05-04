@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { publicMediaUrl } from '@/lib/utils/storage';
-import { ArrowDown, ArrowUp, Image as ImageIcon, Text, Columns2, Trash2, Upload } from 'lucide-react';
+import { ArrowDown, ArrowUp, Eye, EyeOff, Image as ImageIcon, Sparkles, Text, Columns2, Trash2, Upload } from 'lucide-react';
 import type { CommissionBlockRow, CommissionBlockType } from '@/app/(admin)/admin/commissions/actions';
+import { regenerateParagraph } from '@/lib/ai/regenerate-paragraph';
 
 type Props = {
   commissionId: string;
   slug: string;
   initial: CommissionBlockRow[];
+  /** Commission context for AI rewrites */
+  context: { title_en: string | null; watch_model: string | null; client_initials: string | null };
   addAction: (commissionId: string, type: CommissionBlockType) => Promise<CommissionBlockRow>;
   updateAction: (
     commissionId: string,
@@ -24,6 +27,7 @@ export function CommissionBlocks({
   commissionId,
   slug,
   initial,
+  context,
   addAction,
   updateAction,
   removeAction,
@@ -162,13 +166,27 @@ export function CommissionBlocks({
         {blocks.map((block, i) => (
           <div
             key={block.id}
-            className="border border-divider bg-bg-secondary/30 p-4 grid gap-3"
+            className={`border border-divider bg-bg-secondary/30 p-4 grid gap-3 ${block.hidden ? 'opacity-60' : ''}`}
           >
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-[0.25em] text-text-muted">
                 {block.type.replace('_', ' ')} · #{i + 1}
+                {block.hidden && <span className="ml-2 text-accent">hidden</span>}
               </span>
               <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !block.hidden;
+                    patchLocal(block.id, { hidden: next });
+                    persist(block.id, { hidden: next });
+                  }}
+                  aria-label={block.hidden ? 'Show block' : 'Hide block'}
+                  title={block.hidden ? 'Show on live page' : 'Hide from live page'}
+                  className="p-1 border border-divider hover:border-accent text-text-muted hover:text-accent"
+                >
+                  {block.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                </button>
                 <button
                   type="button"
                   onClick={() => move(block.id, -1)}
@@ -199,26 +217,15 @@ export function CommissionBlocks({
             </div>
 
             {block.type === 'paragraph' && (
-              <div className="grid gap-3 md:grid-cols-2">
-                <label className="block">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted">EN</span>
-                  <textarea
-                    rows={5}
-                    defaultValue={block.body_en ?? ''}
-                    onBlur={(e) => persist(block.id, { body_en: e.target.value })}
-                    className="mt-1 w-full bg-bg-primary border border-divider px-3 py-2 text-sm focus:border-accent outline-none"
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted">AR (optional)</span>
-                  <textarea
-                    rows={5}
-                    defaultValue={block.body_fr ?? ''}
-                    onBlur={(e) => persist(block.id, { body_fr: e.target.value })}
-                    className="mt-1 w-full bg-bg-primary border border-divider px-3 py-2 text-sm focus:border-accent outline-none"
-                  />
-                </label>
-              </div>
+              <ParagraphFields
+                block={block}
+                allBlocks={blocks}
+                context={context}
+                onPersist={(patch) => {
+                  patchLocal(block.id, patch);
+                  persist(block.id, patch);
+                }}
+              />
             )}
 
             {(block.type === 'image' || block.type === 'image_pair') && (
@@ -258,6 +265,96 @@ export function CommissionBlocks({
       </div>
 
       {err && <p className="mt-3 text-xs text-red-400">{err}</p>}
+    </div>
+  );
+}
+
+function ParagraphFields({
+  block,
+  allBlocks,
+  context,
+  onPersist,
+}: {
+  block: CommissionBlockRow;
+  allBlocks: CommissionBlockRow[];
+  context: { title_en: string | null; watch_model: string | null; client_initials: string | null };
+  onPersist: (patch: Partial<Pick<CommissionBlockRow, 'body_en' | 'body_fr'>>) => void;
+}) {
+  const enRef = useRef<HTMLTextAreaElement>(null);
+  const frRef = useRef<HTMLTextAreaElement>(null);
+  const [instruction, setInstruction] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  async function rewrite() {
+    setErr(null);
+    setBusy(true);
+    try {
+      // Collect preceding paragraph blocks (in order, before this one).
+      const idx = allBlocks.findIndex((b) => b.id === block.id);
+      const preceding = allBlocks
+        .slice(0, idx)
+        .filter((b) => b.type === 'paragraph' && !b.hidden && b.body_en?.trim())
+        .map((b) => b.body_en as string);
+      const result = await regenerateParagraph({
+        title_en: context.title_en,
+        watch_model: context.watch_model,
+        client_initials: context.client_initials,
+        preceding_paragraphs_en: preceding,
+        current_en: enRef.current?.value ?? block.body_en ?? null,
+        instruction: instruction || null,
+      });
+      if (enRef.current) enRef.current.value = result.body_en;
+      if (frRef.current) frRef.current.value = result.body_fr;
+      onPersist({ body_en: result.body_en, body_fr: result.body_fr });
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-3">
+      <div className="grid gap-3 md:grid-cols-2">
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted">EN</span>
+          <textarea
+            ref={enRef}
+            rows={5}
+            defaultValue={block.body_en ?? ''}
+            onBlur={(e) => onPersist({ body_en: e.target.value })}
+            className="mt-1 w-full bg-bg-primary border border-divider px-3 py-2 text-sm focus:border-accent outline-none"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted">AR (optional)</span>
+          <textarea
+            ref={frRef}
+            rows={5}
+            defaultValue={block.body_fr ?? ''}
+            onBlur={(e) => onPersist({ body_fr: e.target.value })}
+            className="mt-1 w-full bg-bg-primary border border-divider px-3 py-2 text-sm focus:border-accent outline-none"
+          />
+        </label>
+      </div>
+      <div className="flex gap-2 items-stretch">
+        <input
+          value={instruction}
+          onChange={(e) => setInstruction(e.target.value)}
+          placeholder="Optional instruction for rewrite (e.g. 'shorter, lean into the colour')"
+          className="flex-1 bg-bg-primary border border-divider px-3 py-2 text-xs focus:border-accent outline-none"
+        />
+        <button
+          type="button"
+          onClick={rewrite}
+          disabled={busy}
+          className="flex items-center gap-2 border border-divider px-3 py-2 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors disabled:opacity-50"
+        >
+          <Sparkles size={12} /> {busy ? 'Rewriting…' : 'Rewrite'}
+        </button>
+      </div>
+      {err && <p className="text-xs text-red-400">{err}</p>}
     </div>
   );
 }

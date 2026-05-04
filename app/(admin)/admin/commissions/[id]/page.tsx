@@ -29,7 +29,7 @@ export default async function EditCommissionPage({ params }: { params: Promise<{
     supabase.from('commission_images').select('id, url, position').eq('commission_id', id).order('position'),
     (supabase as any)
       .from('commission_blocks')
-      .select('id, position, type, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
+      .select('id, position, type, hidden, body_en, body_fr, image_url, image_url_2, alt_en, alt_fr')
       .eq('commission_id', id)
       .order('position'),
   ]);
@@ -75,6 +75,11 @@ export default async function EditCommissionPage({ params }: { params: Promise<{
             commissionId={id}
             slug={row.slug ?? id}
             initial={(blocks ?? []) as CommissionBlockRow[]}
+            context={{
+              title_en: row.title_en ?? null,
+              watch_model: row.watch_model ?? null,
+              client_initials: row.client_initials ?? null,
+            }}
             addAction={addCommissionBlock}
             updateAction={updateCommissionBlock}
             removeAction={deleteCommissionBlock}

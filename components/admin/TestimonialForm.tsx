@@ -40,22 +40,22 @@ export function TestimonialForm({
       </label>
 
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-text-muted">
-          Backdrop image <span className="ml-2 text-text-muted/60 normal-case tracking-normal">(the watch — shown faded behind the quote)</span>
-        </p>
         <ImageUpload
           name="backdrop_image"
           defaultValue={row?.backdrop_image ?? undefined}
           pathPrefix={`testimonials/${row?.id ?? 'new'}`}
+          label="Backdrop image (the watch — shown faded behind the quote)"
+          hint="1600×1000 px · 16:10 landscape · rendered at low opacity"
         />
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Client photo (optional)</p>
         <ImageUpload
           name="photo_url"
           defaultValue={row?.photo_url ?? undefined}
           pathPrefix={`testimonials/${row?.id ?? 'new'}/photo`}
+          label="Client photo (optional)"
+          hint="600×600 px · 1:1 square"
         />
       </div>
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { Field } from '@/components/admin/Field';
 import { ImageUpload } from '@/components/admin/ImageUpload';
+import { HomeBlockForm } from '@/components/admin/HomeBlockForm';
 import { createClient } from '@/lib/supabase/server';
 import { updateHomeBlock, type HomeBlockKey } from './actions';
 
@@ -77,7 +78,7 @@ export default async function AdminHomePage() {
                   <p className="text-xs text-text-muted mt-1">{meta.intro}</p>
                 </div>
               </div>
-              <form action={action} className="grid gap-6">
+              <HomeBlockForm action={action}>
                 <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-text-muted">
                   <input type="checkbox" name="is_visible" defaultChecked={row.is_visible ?? true} />
                   Visible on home
@@ -89,6 +90,11 @@ export default async function AdminHomePage() {
                     defaultValue={row.image ?? ''}
                     pathPrefix={`home_blocks/${key}`}
                     label="Image"
+                    hint={
+                      key === 'cta_strip'
+                        ? '2400×1200 px · 2:1 landscape · used as faded background'
+                        : '1200×1500 px · 4:5 portrait · paired beside text'
+                    }
                   />
                 )}
 
@@ -123,16 +129,7 @@ export default async function AdminHomePage() {
                     <Field label="CTA URL" name="cta_url" defaultValue={row.cta_url ?? ''} placeholder="/contact" />
                   </div>
                 )}
-
-                <div className="pt-4 border-t border-divider">
-                  <button
-                    type="submit"
-                    className="border border-accent px-8 py-3 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
-                  >
-                    Save block
-                  </button>
-                </div>
-              </form>
+              </HomeBlockForm>
             </section>
           );
         })}

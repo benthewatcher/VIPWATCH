@@ -6,12 +6,14 @@ import { type ReactNode } from 'react';
 
 export function Hero({
   image,
+  imageMobile,
   video,
   alt = '',
   children,
   align = 'left',
 }: {
   image?: string;
+  imageMobile?: string;
   video?: string;
   alt?: string;
   children: ReactNode;
@@ -31,14 +33,35 @@ export function Hero({
             playsInline
             className="h-full w-full object-cover"
           />
-        ) : image ? (
+        ) : image || imageMobile ? (
           <motion.div
             className="absolute inset-0"
             initial={reduced ? false : { scale: 1.1 }}
             animate={reduced ? undefined : { scale: 1 }}
             transition={{ duration: 6, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Image src={image} alt={alt} fill priority quality={95} className="object-cover" sizes="100vw" />
+            {imageMobile && (
+              <Image
+                src={imageMobile}
+                alt={alt}
+                fill
+                priority
+                quality={95}
+                className="object-cover md:hidden"
+                sizes="100vw"
+              />
+            )}
+            {image && (
+              <Image
+                src={image}
+                alt={alt}
+                fill
+                priority
+                quality={95}
+                className={`object-cover ${imageMobile ? 'hidden md:block' : ''}`}
+                sizes="100vw"
+              />
+            )}
           </motion.div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-b from-bg-primary via-bg-secondary to-bg-primary" />

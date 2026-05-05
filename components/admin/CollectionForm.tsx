@@ -102,11 +102,12 @@ export function CollectionForm({
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Cover image (optional)</p>
         <ImageUpload
           name="cover_image"
           defaultValue={row?.cover_image ?? undefined}
           pathPrefix={`collections/${row?.slug ?? 'new'}`}
+          label="Cover image (optional)"
+          hint="900×1200 px · 3:4 portrait · used on collection cards and detail hero"
         />
       </div>
 

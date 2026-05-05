@@ -157,6 +157,7 @@ export default async function CommissionDetail({
   const title = pickLocale(row, 'title', loc) ?? '';
   const summary = pickLocale(row, 'summary', loc);
   const heroUrl = publicMediaUrl(row.hero_image);
+  const heroUrlMobile = publicMediaUrl((row as { hero_image_mobile?: string | null }).hero_image_mobile);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -178,7 +179,7 @@ export default async function CommissionDetail({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Hero image={heroUrl ?? undefined} alt={title}>
+      <Hero image={heroUrl ?? undefined} imageMobile={heroUrlMobile ?? undefined} alt={title}>
         <FadeUp>
           {row.watch_model && (
             <p className="text-xs uppercase tracking-[0.3em] text-accent">{row.watch_model}</p>

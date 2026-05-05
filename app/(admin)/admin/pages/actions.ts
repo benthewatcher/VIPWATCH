@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server';
 const pageSchema = z.object({
   key: z.string().min(1),
   hero_image: z.string().nullable().optional(),
+  hero_image_mobile: z.string().nullable().optional(),
   hero_video: z.string().nullable().optional(),
   hero_heading_en: z.string().nullable().optional(),
   hero_heading_fr: z.string().nullable().optional(),
@@ -25,6 +26,7 @@ export async function updatePage(key: string, form: FormData) {
   const data = pageSchema.parse({
     key,
     hero_image: form.get('hero_image') || null,
+    hero_image_mobile: form.get('hero_image_mobile') || null,
     hero_video: form.get('hero_video') || null,
     hero_heading_en: form.get('hero_heading_en') || null,
     hero_heading_fr: form.get('hero_heading_fr') || null,
@@ -39,7 +41,7 @@ export async function updatePage(key: string, form: FormData) {
     meta_description_fr: form.get('meta_description_fr') || null,
   });
 
-  const supabase = await createClient();
+  const supabase = (await createClient()) as any;
   const { error } = await supabase.from('pages').upsert(data, { onConflict: 'key' });
   if (error) throw new Error(error.message);
 

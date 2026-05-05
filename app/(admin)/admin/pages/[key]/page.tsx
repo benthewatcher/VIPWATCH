@@ -22,12 +22,22 @@ export default async function EditPage({ params }: { params: Promise<{ key: stri
       <AdminHeader title={key === 'home' ? 'Home page' : key.replace(/-/g, ' ')} back={{ href: '/admin/pages', label: 'Pages' }} />
       <main className="p-10">
         <form action={action} className="grid gap-8 max-w-4xl">
-          <ImageUpload
-            name="hero_image"
-            defaultValue={(r.hero_image as string) ?? ''}
-            pathPrefix={`pages/${key}`}
-            label="Hero image"
-          />
+          <div className="grid md:grid-cols-2 gap-6">
+            <ImageUpload
+              name="hero_image"
+              defaultValue={(r.hero_image as string) ?? ''}
+              pathPrefix={`pages/${key}`}
+              label="Hero image (desktop)"
+              hint="2400×1500 px · 16:10 landscape · JPG ≤ 2 MB"
+            />
+            <ImageUpload
+              name="hero_image_mobile"
+              defaultValue={(r.hero_image_mobile as string) ?? ''}
+              pathPrefix={`pages/${key}`}
+              label="Hero image (mobile)"
+              hint="1080×1350 px · 4:5 portrait · falls back to desktop if blank"
+            />
+          </div>
 
           <Field label="Hero video URL (optional)" name="hero_video" defaultValue={(r.hero_video as string) ?? ''} placeholder="https://… .mp4" />
 

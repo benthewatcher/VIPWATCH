@@ -10,21 +10,33 @@ export function ImageUpload({
   defaultValue,
   pathPrefix,
   label = 'Image',
+  hint,
 }: {
   name: string;
   defaultValue?: string | null;
   /** e.g. "services/skeletonisation" — files land at `media/<pathPrefix>/<file>` */
   pathPrefix: string;
   label?: string;
+  /** Recommended dimensions / format hint shown under the uploader. */
+  hint?: string;
 }) {
   const [value, setValue] = useState<string>(defaultValue ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
   const url = publicMediaUrl(value);
 
   async function onFile(file: File) {
     setBusy(true);
     setErr(null);
+    // Try to read pixel dimensions from the file before upload (fast, local).
+    try {
+      const bmp = await createImageBitmap(file);
+      setDims({ w: bmp.width, h: bmp.height });
+      bmp.close();
+    } catch {
+      // ignore — not all browsers support createImageBitmap on every type
+    }
     const supabase = createClient();
     const ext = file.name.split('.').pop() || 'bin';
     const path = `${pathPrefix.replace(/^\/+|\/+$/g, '')}/${Date.now()}.${ext}`;
@@ -43,6 +55,7 @@ export function ImageUpload({
   return (
     <div>
       <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{label}</p>
+      {hint && <p className="text-[10px] text-text-muted/70 mt-1">{hint}</p>}
       <input type="hidden" name={name} value={value} />
 
       {url ? (
@@ -73,6 +86,11 @@ export function ImageUpload({
             className="hidden"
           />
         </label>
+      )}
+      {dims && (
+        <p className="mt-2 text-[10px] text-text-muted">
+          Uploaded: {dims.w}×{dims.h}px
+        </p>
       )}
       {err && <p className="mt-2 text-xs text-red-400">{err}</p>}
     </div>

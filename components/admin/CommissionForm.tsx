@@ -183,18 +183,27 @@ export function CommissionForm({
         </label>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         <ImageUpload
           name="hero_image"
           defaultValue={row?.hero_image ?? ''}
           pathPrefix={slug ? `commissions/${slug}` : 'commissions/_new'}
-          label="Hero image (detail page)"
+          label="Hero image (desktop)"
+          hint="2400×1500 px · 16:10 · JPG ≤ 2 MB"
+        />
+        <ImageUpload
+          name="hero_image_mobile"
+          defaultValue={(row as { hero_image_mobile?: string | null } | null)?.hero_image_mobile ?? ''}
+          pathPrefix={slug ? `commissions/${slug}` : 'commissions/_new'}
+          label="Hero image (mobile)"
+          hint="1080×1350 px · 4:5 portrait · optional"
         />
         <ImageUpload
           name="card_image"
           defaultValue={row?.card_image ?? ''}
           pathPrefix={slug ? `commissions/${slug}` : 'commissions/_new'}
           label="Card image (grid)"
+          hint="900×1200 px · 3:4 portrait"
         />
       </div>
 

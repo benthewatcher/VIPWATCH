@@ -84,11 +84,12 @@ export function DepartmentForm({
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Image</p>
         <ImageUpload
           name="image"
           defaultValue={row?.image ?? undefined}
           pathPrefix={`departments/${row?.slug ?? 'new'}`}
+          label="Image"
+          hint="1600×1280 px · 5:4 landscape · full-bleed tile"
         />
       </div>
 

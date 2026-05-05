@@ -9,7 +9,10 @@ import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
 import { getT } from '@/lib/i18n/t';
 
-export const revalidate = 60;
+// While the homepage is actively being authored, render dynamically so admin
+// edits show up immediately. Switch back to `export const revalidate = 60`
+// once the content stabilises.
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -76,10 +79,11 @@ function Home({ locale, page, featured, services, collections, departments, test
   const ctaLabel = pickLocale(page, 'hero_cta_label', locale) ?? t('heroCta');
   const ctaHref = (page?.hero_cta_href as string) ?? '/contact';
   const heroImg = publicMediaUrl(page?.hero_image as string | null);
+  const heroImgMobile = publicMediaUrl(page?.hero_image_mobile as string | null);
 
   return (
     <>
-      <Hero image={heroImg ?? undefined} alt={heroHeading}>
+      <Hero image={heroImg ?? undefined} imageMobile={heroImgMobile ?? undefined} alt={heroHeading}>
         <FadeUp>
           <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl max-w-4xl tracking-tight leading-[1.05]">
             {heroHeading}

@@ -4,7 +4,7 @@ import { useRef, useState, useTransition } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { ArrowDown, ArrowUp, Eye, EyeOff, Image as ImageIcon, Sparkles, Text, Columns2, Trash2, Upload } from 'lucide-react';
-import type { CommissionBlockRow, CommissionBlockType } from '@/app/(admin)/admin/commissions/actions';
+import type { CommissionBlockRow, CommissionBlockType } from '@/app/(admin)/admin/commissions/types';
 import { regenerateParagraph } from '@/lib/ai/regenerate-paragraph';
 
 type Props = {

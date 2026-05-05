@@ -134,7 +134,7 @@ export function CommissionForm({
             }}
             required
             placeholder="e.g. sapphire-daytona-box"
-            pattern="[a-z0-9-]+"
+            pattern="[-a-z0-9]+"
             className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
           />
         </label>

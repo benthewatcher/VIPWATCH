@@ -17,8 +17,8 @@ import {
   deleteCommissionBlock,
   setCommissionBlockPosition,
   setCommissionRelated,
-  type CommissionBlockRow,
 } from '../actions';
+import type { CommissionBlockRow } from '../types';
 
 export const metadata = { title: 'Edit commission' };
 

@@ -221,20 +221,8 @@ export async function setCommissionImagePosition(
 }
 
 // Block actions (paragraph + image content blocks)
-export type CommissionBlockType = 'paragraph' | 'image' | 'image_pair';
-
-export type CommissionBlockRow = {
-  id: string;
-  position: number;
-  type: CommissionBlockType;
-  hidden: boolean;
-  body_en: string | null;
-  body_fr: string | null;
-  image_url: string | null;
-  image_url_2: string | null;
-  alt_en: string | null;
-  alt_fr: string | null;
-};
+// Types live in ./types — 'use server' files can only export async functions.
+import type { CommissionBlockType, CommissionBlockRow } from './types';
 
 // commission_blocks isn't in generated supabase types yet; cast to any until regenerated.
 export async function addCommissionBlock(

@@ -110,6 +110,22 @@ export async function deleteCommission(id: string) {
   redirect('/admin/commissions');
 }
 
+export async function reorderCommissions(orderedIds: string[]) {
+  const supabase = (await createClient()) as any;
+  // Apply positions in array order: index 0 = position 0, etc.
+  // Run sequentially to keep ordering deterministic.
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('commissions')
+      .update({ position: i })
+      .eq('id', orderedIds[i]);
+    if (error) throw new Error(error.message);
+  }
+  revalidatePath('/admin/commissions');
+  revalidatePath('/[locale]/commissions', 'page');
+  revalidatePath('/[locale]', 'page');
+}
+
 export async function duplicateCommission(id: string) {
   const supabase = await createClient();
   const { data: src, error: srcErr } = await supabase

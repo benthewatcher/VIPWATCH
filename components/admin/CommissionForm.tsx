@@ -7,7 +7,7 @@ import { generateCommissionCopy } from '@/lib/ai/generate-commission';
 import { regenerateSummary } from '@/lib/ai/regenerate-paragraph';
 import { Sparkles } from 'lucide-react';
 
-/** URL-safe slug: lowercase, dashes for whitespace, strip everything else. */
+/** URL-safe slug derived from arbitrary text (used when auto-syncing from title). */
 function slugify(input: string): string {
   return input
     .normalize('NFKD')                    // strip accents (é → e)
@@ -16,6 +16,20 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, '-')          // any non-alphanumeric → dash
     .replace(/^-+|-+$/g, '')              // trim leading/trailing dashes
     .replace(/-+/g, '-');                 // collapse multi-dashes
+}
+
+/**
+ * Soft normaliser for in-progress slug typing: lowercases and strips disallowed
+ * chars but PRESERVES trailing dashes so the user can keep typing multi-segment
+ * slugs like "rolex-daytona-pink".
+ */
+function slugifyInProgress(input: string): string {
+  return input
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')         // disallowed → dash, keep existing dashes
+    .replace(/-{2,}/g, '-');              // collapse runs of dashes
 }
 
 export type CommissionRow = {
@@ -129,9 +143,10 @@ export function CommissionForm({
             name="slug"
             value={slug}
             onChange={(e) => {
-              setSlug(slugify(e.target.value));
+              setSlug(slugifyInProgress(e.target.value));
               setSlugDirty(true);
             }}
+            onBlur={(e) => setSlug(slugify(e.target.value))}
             required
             placeholder="e.g. sapphire-daytona-box"
             pattern="[-a-z0-9]+"

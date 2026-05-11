@@ -24,9 +24,11 @@ export type CollectionRow = {
   description_en?: string | null;
   description_fr?: string | null;
   cover_image?: string | null;
+  hero_video?: string | null;
   is_private?: boolean | null;
   is_featured?: boolean | null;
   position?: number | null;
+  lookbook_position?: number | null;
 };
 
 export function CollectionForm({
@@ -77,6 +79,12 @@ export function CollectionForm({
           />
         </label>
         <Field label="Position" name="position" type="number" defaultValue={row?.position ?? 0} />
+        <Field
+          label="Lookbook order"
+          name="lookbook_position"
+          type="number"
+          defaultValue={row?.lookbook_position ?? 0}
+        />
         <div className="flex items-end gap-6">
           <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-text-muted">
             <input type="checkbox" name="is_private" defaultChecked={!!row?.is_private} />
@@ -101,13 +109,20 @@ export function CollectionForm({
         </div>
       </div>
 
-      <div>
+      <div className="grid gap-6 md:grid-cols-2">
         <ImageUpload
           name="cover_image"
           defaultValue={row?.cover_image ?? undefined}
           pathPrefix={`collections/${row?.slug ?? 'new'}`}
           label="Cover image (optional)"
           hint="900×1200 px · 3:4 portrait · used on collection cards and detail hero"
+        />
+        <ImageUpload
+          name="hero_video"
+          defaultValue={row?.hero_video ?? undefined}
+          pathPrefix={`collections/${row?.slug ?? 'new'}/video`}
+          label="Lookbook video (optional)"
+          hint="MP4 · 16:9 or 9:16 · muted loop · background for the /lookbook section"
         />
       </div>
 

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { ThemeToggle } from './ThemeToggle';
+import { UserMenu } from './UserMenu';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils';
 const items = [
   { key: 'commissions', href: '/commissions' },
   { key: 'collections', href: '/collections' },
+  { key: 'lookbook', href: '/lookbook' },
   { key: 'services', href: '/services' },
   { key: 'process', href: '/process' },
   { key: 'artsAndCrafts', href: '/arts-and-crafts' },
@@ -55,6 +57,7 @@ export function Nav({ locale }: { locale: string }) {
           ))}
           <LocaleSwitcher locale={locale} />
           <ThemeToggle />
+          <UserMenu locale={locale} />
         </nav>
 
         <button
@@ -81,6 +84,7 @@ export function Nav({ locale }: { locale: string }) {
           <div className="pt-2 flex items-center gap-4">
             <LocaleSwitcher locale={locale} />
             <ThemeToggle />
+            <UserMenu locale={locale} />
           </div>
         </nav>
       )}

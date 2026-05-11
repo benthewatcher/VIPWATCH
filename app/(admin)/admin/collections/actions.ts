@@ -14,9 +14,11 @@ const collectionSchema = z.object({
   description_en: z.string().nullable().optional(),
   description_fr: z.string().nullable().optional(),
   cover_image: z.string().nullable().optional(),
+  hero_video: z.string().nullable().optional(),
   is_private: z.coerce.boolean().default(false),
   is_featured: z.coerce.boolean().default(false),
   position: z.coerce.number().int().default(0),
+  lookbook_position: z.coerce.number().int().default(0),
   theme: z.enum(['system', 'light', 'dark']).default('system'),
 });
 
@@ -30,9 +32,11 @@ function parse(form: FormData) {
     description_en: form.get('description_en') || null,
     description_fr: form.get('description_fr') || null,
     cover_image: form.get('cover_image') || null,
+    hero_video: form.get('hero_video') || null,
     is_private: form.get('is_private') === 'on' || form.get('is_private') === 'true',
     is_featured: form.get('is_featured') === 'on' || form.get('is_featured') === 'true',
     position: form.get('position') || 0,
+    lookbook_position: form.get('lookbook_position') || 0,
     theme: (form.get('theme') as string) || 'system',
   });
 }
@@ -48,6 +52,7 @@ export async function createCollection(form: FormData) {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/collections');
   revalidatePath('/[locale]/collections', 'page');
+  revalidatePath('/[locale]/lookbook', 'page');
   redirect(`/admin/collections/${row.id}`);
 }
 
@@ -62,6 +67,7 @@ export async function updateCollection(id: string, form: FormData) {
   revalidatePath('/admin/collections');
   revalidatePath(`/admin/collections/${id}`);
   revalidatePath('/[locale]/collections', 'page');
+  revalidatePath('/[locale]/lookbook', 'page');
   revalidatePath('/[locale]/collections/[slug]', 'page');
   revalidatePath('/[locale]', 'page');
 }
@@ -72,6 +78,7 @@ export async function deleteCollection(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath('/admin/collections');
   revalidatePath('/[locale]/collections', 'page');
+  revalidatePath('/[locale]/lookbook', 'page');
   redirect('/admin/collections');
 }
 
@@ -132,5 +139,6 @@ export async function setCollectionPosition(collectionId: string, position: numb
   if (error) throw new Error(error.message);
   revalidatePath('/admin/collections');
   revalidatePath('/[locale]/collections', 'page');
+  revalidatePath('/[locale]/lookbook', 'page');
   revalidatePath('/[locale]', 'page');
 }

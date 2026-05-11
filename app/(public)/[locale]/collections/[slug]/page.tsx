@@ -6,7 +6,7 @@ import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
 import { ThemeForce } from '@/components/site/ThemeForce';
-import { publicMediaUrl } from '@/lib/utils/storage';
+import { publicMediaUrl, mobileCoverUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
 
@@ -83,7 +83,7 @@ export default async function CollectionDetail({
 
   const { data: row } = await supabase
     .from('commission_collections')
-    .select('id, slug, name_en, name_fr, project_en, project_fr, description_en, description_fr, cover_image, is_private, theme')
+    .select('id, slug, name_en, name_fr, project_en, project_fr, description_en, description_fr, cover_image, cover_image_mobile, is_private, theme')
     .eq('slug', slug)
     .eq('is_private', false)
     .maybeSingle();
@@ -121,6 +121,7 @@ export default async function CollectionDetail({
   const project = pickLocale(row, 'project', loc);
   const description = pickLocale(row, 'description', loc);
   const heroUrl = publicMediaUrl(row.cover_image);
+  const heroUrlMobile = mobileCoverUrl(row.cover_image, row.cover_image_mobile);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -140,7 +141,7 @@ export default async function CollectionDetail({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Hero image={heroUrl ?? undefined} alt={name}>
+      <Hero image={heroUrl ?? undefined} imageMobile={heroUrlMobile ?? undefined} alt={name}>
         <FadeUp>
           {project && <p className="text-xs uppercase tracking-[0.3em] text-accent">{project}</p>}
           <h1 className="font-serif text-5xl md:text-7xl mt-4 max-w-4xl tracking-tight leading-[1.05]">

@@ -21,6 +21,12 @@ export const metadata: Metadata = {
   },
   description: 'Bespoke personalisation of luxury timepieces.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: { index: false, follow: false, noimageindex: true },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -250,7 +250,7 @@ export default async function CommissionDetail({
         </div>
       )}
 
-      {gallery.length > 0 && (
+      {false && gallery.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 pb-24">
           <div className="grid gap-4 md:grid-cols-2">
             {gallery.map((img, i) => {

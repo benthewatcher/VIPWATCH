@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { LookbookSection } from '@/components/site/lookbook/LookbookSection';
 import { getLookbookCollections } from '@/lib/data/collections';
 import { pickLocale } from '@/lib/i18n/pick';
-import { publicMediaUrl } from '@/lib/utils/storage';
+import { publicMediaUrl, mobileCoverUrl } from '@/lib/utils/storage';
 import type { Locale } from '@/lib/i18n/config';
 
 export const revalidate = 60;
@@ -21,9 +21,11 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `/${locale}/lookbook`,
-      languages: { en: '/en/lookbook', ar: '/ar/lookbook' },
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: { index: false, follow: false, noimageindex: true },
     },
     openGraph: { type: 'website', title, description, url: `/${locale}/lookbook`, locale },
   };
@@ -56,6 +58,7 @@ export default async function LookbookPage({
             description={pickLocale(c, 'description', loc)}
             videoUrl={publicMediaUrl(c.hero_video)}
             posterUrl={publicMediaUrl(c.cover_image)}
+            posterUrlMobile={mobileCoverUrl(c.cover_image, c.cover_image_mobile)}
             locale={loc}
             commissions={c.commissions.map((com) => ({
               id: com.id,

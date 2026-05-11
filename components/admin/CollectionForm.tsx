@@ -24,6 +24,7 @@ export type CollectionRow = {
   description_en?: string | null;
   description_fr?: string | null;
   cover_image?: string | null;
+  cover_image_mobile?: string | null;
   hero_video?: string | null;
   is_private?: boolean | null;
   is_featured?: boolean | null;
@@ -109,20 +110,27 @@ export function CollectionForm({
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-3">
         <ImageUpload
           name="cover_image"
           defaultValue={row?.cover_image ?? undefined}
           pathPrefix={`collections/${row?.slug ?? 'new'}`}
-          label="Cover image (optional)"
-          hint="900×1200 px · 3:4 portrait · used on collection cards and detail hero"
+          label="Cover image — desktop"
+          hint="1600×1200 px · 4:3 landscape · used on collection cards and lookbook"
+        />
+        <ImageUpload
+          name="cover_image_mobile"
+          defaultValue={row?.cover_image_mobile ?? undefined}
+          pathPrefix={`collections/${row?.slug ?? 'new'}/mobile`}
+          label="Cover image — mobile (optional)"
+          hint="900×1600 px · 9:16 portrait · auto-cropped from desktop if left empty"
         />
         <ImageUpload
           name="hero_video"
           defaultValue={row?.hero_video ?? undefined}
           pathPrefix={`collections/${row?.slug ?? 'new'}/video`}
           label="Lookbook video (optional)"
-          hint="MP4 · 16:9 or 9:16 · muted loop · background for the /lookbook section"
+          hint="MP4 · muted loop · plays as the lookbook section background"
         />
       </div>
 

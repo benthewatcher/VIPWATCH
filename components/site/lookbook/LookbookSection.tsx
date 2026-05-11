@@ -17,6 +17,7 @@ export function LookbookSection({
   description,
   videoUrl,
   posterUrl,
+  posterUrlMobile,
   commissions,
   locale,
 }: {
@@ -25,6 +26,7 @@ export function LookbookSection({
   description?: string | null;
   videoUrl?: string | null;
   posterUrl?: string | null;
+  posterUrlMobile?: string | null;
   commissions: Commission[];
   locale: string;
 }) {
@@ -63,9 +65,18 @@ export function LookbookSection({
           preload="metadata"
           className="absolute inset-0 w-full h-full object-cover"
         />
-      ) : posterUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={posterUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      ) : posterUrl || posterUrlMobile ? (
+        <picture>
+          {posterUrlMobile && (
+            <source media="(max-width: 767px)" srcSet={posterUrlMobile} />
+          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={posterUrl ?? posterUrlMobile ?? ''}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        </picture>
       ) : (
         <div className="absolute inset-0 bg-bg-secondary" />
       )}

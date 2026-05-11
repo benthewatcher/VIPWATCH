@@ -12,12 +12,11 @@ import { cn } from '@/lib/utils';
 
 const items = [
   { key: 'commissions', href: '/commissions' },
-  { key: 'collections', href: '/collections' },
+  { key: 'atelier', href: '/atelier' },
   { key: 'lookbook', href: '/lookbook' },
   { key: 'services', href: '/services' },
   { key: 'process', href: '/process' },
   { key: 'artsAndCrafts', href: '/arts-and-crafts' },
-  { key: 'atelier', href: '/atelier' },
   { key: 'blog', href: '/blog' },
   { key: 'contact', href: '/contact' },
 ] as const;

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { CollageGrid, type CollageItem } from '@/components/site/collage/CollageGrid';
-import { getCollectionWatches } from '@/lib/data/collections';
+import { getCollectionImages } from '@/lib/data/collections';
 import { pickLocale } from '@/lib/i18n/pick';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import type { Locale } from '@/lib/i18n/config';
@@ -29,14 +29,14 @@ export default async function CollagePage({
 }) {
   const { locale } = await params;
   const loc = locale as Locale;
-  const rows = await getCollectionWatches();
+  const rows = await getCollectionImages();
 
   const items: CollageItem[] = rows
     .map((r) => ({
-      id: r.id,
+      id: `${r.commission_id}:${r.kind}:${r.position}`,
       slug: r.slug,
-      title: pickLocale(r, 'title', loc) ?? r.watch_model ?? '',
-      image: publicMediaUrl(r.card_image ?? r.hero_image) ?? '',
+      title: pickLocale(r, 'title', loc) ?? '',
+      image: publicMediaUrl(r.url) ?? '',
     }))
     .filter((i) => i.image);
 

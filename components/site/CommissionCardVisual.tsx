@@ -29,10 +29,7 @@ export function CommissionCardVisual({
         )}
       </div>
       <div className="mt-4">
-        {brand && (
-          <p className="text-xs uppercase tracking-[0.2em] text-text-muted">{brand}</p>
-        )}
-        <h3 className="font-serif text-2xl mt-1 group-hover:text-accent transition-colors">
+        <h3 className="font-serif text-2xl group-hover:text-accent transition-colors">
           {title}
         </h3>
       </div>

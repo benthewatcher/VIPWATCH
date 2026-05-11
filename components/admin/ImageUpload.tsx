@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { publicMediaUrl } from '@/lib/utils/storage';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, FolderOpen } from 'lucide-react';
+import { MediaPicker } from './MediaPicker';
 
 export function ImageUpload({
   name,
@@ -24,6 +25,7 @@ export function ImageUpload({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [dims, setDims] = useState<{ w: number; h: number } | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const url = publicMediaUrl(value);
 
   async function onFile(file: File) {
@@ -72,20 +74,30 @@ export function ImageUpload({
           </button>
         </div>
       ) : (
-        <label className="mt-2 flex flex-col items-center justify-center gap-2 border border-dashed border-divider bg-bg-secondary/50 py-10 px-6 text-text-muted text-sm cursor-pointer hover:border-accent hover:text-accent transition-colors">
-          <Upload size={20} />
-          <span>{busy ? 'Uploading…' : 'Click to upload'}</span>
-          <input
-            type="file"
-            accept="image/*,video/mp4"
-            disabled={busy}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) onFile(f);
-            }}
-            className="hidden"
-          />
-        </label>
+        <div className="mt-2 grid gap-2">
+          <label className="flex flex-col items-center justify-center gap-2 border border-dashed border-divider bg-bg-secondary/50 py-10 px-6 text-text-muted text-sm cursor-pointer hover:border-accent hover:text-accent transition-colors">
+            <Upload size={20} />
+            <span>{busy ? 'Uploading…' : 'Click to upload'}</span>
+            <input
+              type="file"
+              accept="image/*,video/mp4"
+              disabled={busy}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onFile(f);
+              }}
+              className="hidden"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center justify-center gap-2 border border-divider bg-bg-secondary/30 py-2.5 px-4 text-xs uppercase tracking-[0.2em] text-text-muted hover:border-accent hover:text-accent transition-colors"
+          >
+            <FolderOpen size={14} />
+            Choose from library
+          </button>
+        </div>
       )}
       {dims && (
         <p className="mt-2 text-[10px] text-text-muted">
@@ -93,6 +105,15 @@ export function ImageUpload({
         </p>
       )}
       {err && <p className="mt-2 text-xs text-red-400">{err}</p>}
+
+      <MediaPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={(path) => {
+          setValue(path);
+          setErr(null);
+        }}
+      />
     </div>
   );
 }

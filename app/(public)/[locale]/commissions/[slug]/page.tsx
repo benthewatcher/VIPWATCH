@@ -181,10 +181,7 @@ export default async function CommissionDetail({
       />
       <Hero image={heroUrl ?? undefined} imageMobile={heroUrlMobile ?? undefined} alt={title}>
         <FadeUp>
-          {row.watch_model && (
-            <p className="text-xs uppercase tracking-[0.3em] text-accent">{row.watch_model}</p>
-          )}
-          <h1 className="font-serif text-5xl md:text-7xl mt-4 max-w-4xl tracking-tight leading-[1.05]">
+          <h1 className="font-serif text-5xl md:text-7xl max-w-4xl tracking-tight leading-[1.05]">
             {title}
           </h1>
           {summary && <p className="mt-6 max-w-xl text-lg text-text-muted">{summary}</p>}

@@ -4,6 +4,8 @@ import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
+import { CommissionSpec } from '@/components/site/CommissionSpec';
+import { BeginCommissionCTA } from '@/components/site/BeginCommissionCTA';
 import { ThemeForce } from '@/components/site/ThemeForce';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
@@ -184,25 +186,21 @@ export default async function CommissionDetail({
           <h1 className="font-serif text-5xl md:text-7xl max-w-4xl tracking-tight leading-[1.05]">
             {title}
           </h1>
-          {summary && <p className="mt-6 max-w-xl text-lg text-text-muted">{summary}</p>}
         </FadeUp>
       </Hero>
+
+      <CommissionSpec
+        locale={loc}
+        baseWatch={(row as { base_watch?: string | null }).base_watch ?? null}
+        services={(row as { services_performed?: string | null }).services_performed ?? null}
+        timeline={(row as { timeline?: string | null }).timeline ?? null}
+      />
 
       {blocks.length > 0 && (
         <div className="py-24 md:py-32 grid gap-20">
           {blocks.map((block) => {
             if (block.type === 'paragraph') {
-              const text = pickLocale(block, 'body', loc);
-              if (!text) return null;
-              return (
-                <section key={block.id} className="mx-auto max-w-3xl px-6">
-                  <FadeUp>
-                    <div className="font-serif text-2xl md:text-3xl leading-snug whitespace-pre-line">
-                      {text}
-                    </div>
-                  </FadeUp>
-                </section>
-              );
+              return null;
             }
             if (block.type === 'image') {
               const url = publicMediaUrl(block.image_url);
@@ -289,17 +287,7 @@ export default async function CommissionDetail({
         </section>
       )}
 
-      <section className="border-t border-divider mx-auto max-w-7xl px-6 py-24 md:py-32 text-center">
-        <h2 className="font-serif text-4xl md:text-5xl">
-          {loc === 'ar' ? 'Une réalisation similaire vous intéresse ?' : 'Considering a similar commission?'}
-        </h2>
-        <Link
-          href={`/${loc}/contact`}
-          className="inline-block mt-10 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
-        >
-          {loc === 'ar' ? 'Contacter l\'atelier' : 'Contact the atelier'}
-        </Link>
-      </section>
+      <BeginCommissionCTA locale={loc} />
     </article>
   );
 }

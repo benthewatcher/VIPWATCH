@@ -3,7 +3,6 @@
 import { getT } from '@/lib/i18n/t';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LocaleSwitcher } from './LocaleSwitcher';
 import { ThemeToggle } from './ThemeToggle';
 import { UserMenu } from './UserMenu';
 import { useState } from 'react';
@@ -54,7 +53,6 @@ export function Nav({ locale }: { locale: string }) {
               {t(item.key)}
             </Link>
           ))}
-          <LocaleSwitcher locale={locale} />
           <ThemeToggle />
           <UserMenu locale={locale} />
         </nav>
@@ -81,7 +79,6 @@ export function Nav({ locale }: { locale: string }) {
             </Link>
           ))}
           <div className="pt-2 flex items-center gap-4">
-            <LocaleSwitcher locale={locale} />
             <ThemeToggle />
             <UserMenu locale={locale} />
           </div>

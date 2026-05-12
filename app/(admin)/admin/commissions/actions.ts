@@ -25,6 +25,9 @@ const commissionSchema = z.object({
   summary_fr: z.string().default(''),
   body_en: z.string().nullable().optional(),
   body_fr: z.string().default(''),
+  base_watch: z.string().nullable().optional(),
+  services_performed: z.string().nullable().optional(),
+  timeline: z.string().nullable().optional(),
 });
 
 function parse(form: FormData) {
@@ -47,6 +50,9 @@ function parse(form: FormData) {
     summary_fr: (form.get('summary_fr') as string) || '',
     body_en: form.get('body_en') || null,
     body_fr: (form.get('body_fr') as string) || '',
+    base_watch: form.get('base_watch') || null,
+    services_performed: form.get('services_performed') || null,
+    timeline: form.get('timeline') || null,
     theme: (form.get('theme') as string) || 'system',
   });
 }

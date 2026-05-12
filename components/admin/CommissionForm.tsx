@@ -50,6 +50,9 @@ export type CommissionRow = {
   summary_fr?: string | null;
   body_en?: string | null;
   body_fr?: string | null;
+  base_watch?: string | null;
+  services_performed?: string | null;
+  timeline?: string | null;
 };
 
 export function CommissionForm({
@@ -244,6 +247,39 @@ export function CommissionForm({
       {genError && <p className="text-xs text-red-400 -mt-4">{genError}</p>}
 
       <SummaryWithRewrite row={row} formRef={formRef} />
+
+      <div className="border-t border-divider pt-6">
+        <p className="text-xs uppercase tracking-[0.2em] text-text-muted mb-4">
+          Project specifications{' '}
+          <span className="ml-2 normal-case tracking-normal text-text-muted/60">
+            (shown on the public commission page)
+          </span>
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Field
+            label="Client's base watch"
+            name="base_watch"
+            defaultValue={row?.base_watch ?? ''}
+            placeholder="e.g. Rolex Daytona ref. 116500LN"
+          />
+          <Field
+            label="Timeline"
+            name="timeline"
+            defaultValue={row?.timeline ?? ''}
+            placeholder="e.g. Q3 2024 — Q1 2025"
+          />
+        </div>
+        <label className="mt-4 block">
+          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">Services performed</span>
+          <textarea
+            name="services_performed"
+            rows={4}
+            defaultValue={row?.services_performed ?? ''}
+            placeholder={'One per line, e.g.\nDial colour change\nSapphire bezel insert\nHand re-luming'}
+            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+      </div>
 
       <p className="text-xs text-text-muted -mt-4">
         Add the story and images below in <em>Body sections</em> after saving.

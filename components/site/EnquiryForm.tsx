@@ -25,7 +25,7 @@ export function EnquiryForm({ locale }: { locale: string }) {
       <Field label={f('name')} name="name" required />
       <div className="grid md:grid-cols-2 gap-6">
         <Field label={f('email')} name="email" type="email" required />
-        <Field label={f('phone')} name="phone" />
+        <Field label={f('phone')} name="phone" type="tel" />
       </div>
       <Field label={f('country')} name="country" />
       <div className="grid md:grid-cols-2 gap-6">

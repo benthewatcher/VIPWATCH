@@ -40,6 +40,9 @@ export type CommissionRow = {
   hero_image: string | null;
   hero_video: string | null;
   card_image: string | null;
+  base_watch: string | null;
+  services_performed: string | null;
+  timeline: string | null;
   status: PublishStatus;
   is_featured: boolean;
   position: number;

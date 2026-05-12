@@ -64,7 +64,7 @@
     "fields": {
       "name": "Full name",
       "email": "Email",
-      "phone": "Phone (optional)",
+      "phone": "WhatsApp (optional)",
       "country": "Country",
       "watchBrand": "Watch brand",
       "watchModel": "Watch model",

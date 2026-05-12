@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { SectionIntro } from '@/components/site/SectionIntro';
@@ -131,11 +132,12 @@ function Home({ locale, page, featured, services, collections, departments, test
             {atelier.image && (
               <FadeUp>
                 <div className="relative aspect-[4/5] bg-bg-secondary overflow-hidden">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                  <Image
                     src={publicMediaUrl(atelier.image) ?? ''}
                     alt={pickLocale(atelier, 'title', locale) ?? ''}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="object-cover"
                   />
                 </div>
               </FadeUp>
@@ -231,11 +233,12 @@ function Home({ locale, page, featured, services, collections, departments, test
                   <Link href={`/${locale}/collections/${c.slug}`} className="group block">
                     <div className="relative aspect-[16/10] overflow-hidden bg-bg-secondary border border-divider">
                       {img && (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={img}
                           alt={name}
-                          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          fill
+                          sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       )}
                     </div>
@@ -309,11 +312,12 @@ function Home({ locale, page, featured, services, collections, departments, test
                     className="relative block aspect-[4/5] md:aspect-[5/4] overflow-hidden bg-bg-secondary group"
                   >
                     {img && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <Image
                         src={img}
                         alt={title}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        fill
+                        sizes="(min-width: 768px) 50vw, 100vw"
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-bg-primary/90 via-bg-primary/40 to-transparent" />
@@ -349,12 +353,13 @@ function Home({ locale, page, featured, services, collections, departments, test
                     <figure className="relative bg-bg-primary p-10 md:p-14 min-h-[28rem] flex flex-col justify-end overflow-hidden">
                       {img && (
                         <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
+                          <Image
                             src={img}
                             alt=""
                             aria-hidden="true"
-                            className="absolute inset-0 w-full h-full object-cover opacity-15"
+                            fill
+                            sizes="(min-width: 768px) 50vw, 100vw"
+                            className="object-cover opacity-15"
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/80 to-bg-primary/30" />
                         </>
@@ -379,12 +384,13 @@ function Home({ locale, page, featured, services, collections, departments, test
         <section className="relative border-t border-divider overflow-hidden">
           {ctaStrip.image && (
             <>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={publicMediaUrl(ctaStrip.image) ?? ''}
                 alt=""
                 aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover opacity-30"
+                fill
+                sizes="100vw"
+                className="object-cover opacity-30"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/80 to-bg-primary/50" />
             </>

@@ -31,20 +31,44 @@ export function ImageUpload({
   async function onFile(file: File) {
     setBusy(true);
     setErr(null);
-    // Try to read pixel dimensions from the file before upload (fast, local).
-    try {
-      const bmp = await createImageBitmap(file);
-      setDims({ w: bmp.width, h: bmp.height });
-      bmp.close();
-    } catch {
-      // ignore — not all browsers support createImageBitmap on every type
+    setDims(null);
+
+    const isImage = file.type.startsWith('image/');
+    const isVideo = file.type.startsWith('video/');
+
+    let payload: Blob = file;
+    let ext = file.name.split('.').pop()?.toLowerCase() || 'bin';
+    let contentType = file.type || 'application/octet-stream';
+
+    if (isImage && file.type !== 'image/svg+xml' && file.type !== 'image/gif') {
+      // Resize to max 2400px long edge and re-encode as WebP at q=0.82.
+      try {
+        const optimised = await resizeAndEncode(file, 2400, 0.82);
+        if (optimised) {
+          payload = optimised.blob;
+          ext = 'webp';
+          contentType = 'image/webp';
+          setDims({ w: optimised.width, h: optimised.height });
+        }
+      } catch {
+        // fall through and upload the original
+      }
+    } else if (isImage) {
+      // Still capture dims for the hint, but upload as-is.
+      try {
+        const bmp = await createImageBitmap(file);
+        setDims({ w: bmp.width, h: bmp.height });
+        bmp.close();
+      } catch {
+        /* ignore */
+      }
     }
+
     const supabase = createClient();
-    const ext = file.name.split('.').pop() || 'bin';
     const path = `${pathPrefix.replace(/^\/+|\/+$/g, '')}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage
       .from('media')
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, payload, { upsert: true, contentType });
     if (error) {
       setErr(error.message);
       setBusy(false);
@@ -52,6 +76,7 @@ export function ImageUpload({
     }
     setValue(`media/${path}`);
     setBusy(false);
+    void isVideo; // silence unused-var lint; videos take the as-is path.
   }
 
   return (
@@ -116,4 +141,33 @@ export function ImageUpload({
       />
     </div>
   );
+}
+
+async function resizeAndEncode(
+  file: File,
+  maxEdge: number,
+  quality: number,
+): Promise<{ blob: Blob; width: number; height: number } | null> {
+  const bitmap = await createImageBitmap(file);
+  const { width: w, height: h } = bitmap;
+  const scale = Math.min(1, maxEdge / Math.max(w, h));
+  const targetW = Math.round(w * scale);
+  const targetH = Math.round(h * scale);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    bitmap.close();
+    return null;
+  }
+  ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+  bitmap.close();
+
+  const blob: Blob | null = await new Promise((resolve) =>
+    canvas.toBlob((b) => resolve(b), 'image/webp', quality),
+  );
+  if (!blob) return null;
+  return { blob, width: targetW, height: targetH };
 }

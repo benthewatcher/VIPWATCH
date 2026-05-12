@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { CollageGrid, type CollageItem } from '@/components/site/collage/CollageGrid';
 import { getCollectionImages } from '@/lib/data/collections';
+import { createClient } from '@/lib/supabase/server';
 import { pickLocale } from '@/lib/i18n/pick';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import type { Locale } from '@/lib/i18n/config';
@@ -29,7 +30,18 @@ export default async function CollagePage({
 }) {
   const { locale } = await params;
   const loc = locale as Locale;
-  const rows = await getCollectionImages();
+  const supabase = (await createClient()) as any;
+  const [rows, orderRes] = await Promise.all([
+    getCollectionImages(),
+    supabase.from('collage_tiles').select('image_path, position').order('position', { ascending: true }),
+  ]);
+
+  const orderMap = new Map(
+    ((orderRes.data ?? []) as Array<{ image_path: string; position: number }>).map((r) => [
+      r.image_path,
+      r.position,
+    ]),
+  );
 
   const items: CollageItem[] = rows
     .map((r) => ({
@@ -37,8 +49,19 @@ export default async function CollagePage({
       slug: r.slug,
       title: pickLocale(r, 'title', loc) ?? '',
       image: publicMediaUrl(r.url) ?? '',
+      _path: r.url,
+      _order: orderMap.get(r.url),
     }))
-    .filter((i) => i.image);
+    .filter((i) => i.image)
+    .sort((a, b) => {
+      const ao = a._order;
+      const bo = b._order;
+      if (ao !== undefined && bo !== undefined) return ao - bo;
+      if (ao !== undefined) return -1;
+      if (bo !== undefined) return 1;
+      return 0;
+    })
+    .map(({ _path, _order, ...rest }) => rest);
 
   return (
     <section>

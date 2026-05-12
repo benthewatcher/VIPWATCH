@@ -109,7 +109,7 @@ export type CollectionImage = {
   title_en: string | null;
   title_fr: string | null;
   url: string;
-  kind: 'hero' | 'card' | 'gallery';
+  kind: 'hero' | 'hero_mobile' | 'card' | 'gallery' | 'block';
   position: number;
 };
 
@@ -136,15 +136,20 @@ export async function getCollectionImages(): Promise<CollectionImage[]> {
   );
   if (ids.length === 0) return [];
 
-  const [{ data: comms }, { data: gallery }] = await Promise.all([
+  const [{ data: comms }, { data: gallery }, { data: blocks }] = await Promise.all([
     supabase
       .from('commissions')
-      .select('id, slug, title_en, title_fr, hero_image, card_image')
+      .select('id, slug, title_en, title_fr, hero_image, hero_image_mobile, card_image')
       .eq('status', 'published')
       .in('id', ids),
     supabase
       .from('commission_images')
       .select('commission_id, url, position')
+      .in('commission_id', ids)
+      .order('position', { ascending: true }),
+    supabase
+      .from('commission_blocks')
+      .select('commission_id, image_url, image_url_2, position')
       .in('commission_id', ids)
       .order('position', { ascending: true }),
   ]);
@@ -155,6 +160,7 @@ export async function getCollectionImages(): Promise<CollectionImage[]> {
     title_en: string | null;
     title_fr: string | null;
     hero_image: string | null;
+    hero_image_mobile: string | null;
     card_image: string | null;
   }>;
   const byId = new Map(commRows.map((c) => [c.id, c]));
@@ -168,28 +174,10 @@ export async function getCollectionImages(): Promise<CollectionImage[]> {
   }
 
   for (const c of commRows) {
-    if (c.hero_image) {
-      push({
-        commission_id: c.id,
-        slug: c.slug,
-        title_en: c.title_en,
-        title_fr: c.title_fr,
-        url: c.hero_image,
-        kind: 'hero',
-        position: 0,
-      });
-    }
-    if (c.card_image && c.card_image !== c.hero_image) {
-      push({
-        commission_id: c.id,
-        slug: c.slug,
-        title_en: c.title_en,
-        title_fr: c.title_fr,
-        url: c.card_image,
-        kind: 'card',
-        position: 1,
-      });
-    }
+    const meta = { commission_id: c.id, slug: c.slug, title_en: c.title_en, title_fr: c.title_fr };
+    if (c.hero_image) push({ ...meta, url: c.hero_image, kind: 'hero', position: 0 });
+    if (c.hero_image_mobile) push({ ...meta, url: c.hero_image_mobile, kind: 'hero_mobile', position: 1 });
+    if (c.card_image) push({ ...meta, url: c.card_image, kind: 'card', position: 2 });
   }
   for (const g of ((gallery ?? []) as Array<{ commission_id: string; url: string; position: number }>)) {
     const c = byId.get(g.commission_id);
@@ -201,8 +189,20 @@ export async function getCollectionImages(): Promise<CollectionImage[]> {
       title_fr: c.title_fr,
       url: g.url,
       kind: 'gallery',
-      position: 2 + g.position,
+      position: 10 + g.position,
     });
+  }
+  for (const b of ((blocks ?? []) as Array<{
+    commission_id: string;
+    image_url: string | null;
+    image_url_2: string | null;
+    position: number;
+  }>)) {
+    const c = byId.get(b.commission_id);
+    if (!c) continue;
+    const meta = { commission_id: c.id, slug: c.slug, title_en: c.title_en, title_fr: c.title_fr };
+    if (b.image_url) push({ ...meta, url: b.image_url, kind: 'block', position: 100 + b.position * 2 });
+    if (b.image_url_2) push({ ...meta, url: b.image_url_2, kind: 'block', position: 100 + b.position * 2 + 1 });
   }
 
   return out;

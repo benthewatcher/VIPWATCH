@@ -23,6 +23,14 @@ const adminNav = [
   { label: 'Settings', href: '/admin/settings' },
 ];
 
+// Pages that are hidden from the public top nav but still live on the site —
+// surfaced here so admins can preview the public version with one click.
+const hiddenPublicLinks = [
+  { label: 'Services', href: '/en/services' },
+  { label: 'Arts & Crafts', href: '/en/arts-and-crafts' },
+  { label: 'Journal', href: '/en/blog' },
+];
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -47,6 +55,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           ))}
         </nav>
         <div className="pt-6 border-t border-divider">
+          <p className="text-[10px] uppercase tracking-[0.25em] text-text-muted/70 mb-2">
+            Hidden from public nav
+          </p>
+          <nav className="flex flex-col gap-1 mb-6">
+            {hiddenPublicLinks.map((l) => (
+              <a
+                key={l.href}
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-text-muted hover:text-accent transition-colors"
+              >
+                {l.label} ↗
+              </a>
+            ))}
+          </nav>
           <p className="text-xs text-text-muted truncate">{user.email}</p>
           <form action={signOut}>
             <button

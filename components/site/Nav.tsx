@@ -9,14 +9,14 @@ import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Public top nav. Services, Arts & Crafts and Journal are hidden for now —
+// they're still reachable from /admin (admin sidebar links to their editors)
+// and the pages themselves still resolve if you type the URL directly.
 const items = [
   { key: 'commissions', href: '/commissions' },
   { key: 'atelier', href: '/atelier' },
   { key: 'lookbook', href: '/lookbook' },
-  { key: 'services', href: '/services' },
   { key: 'process', href: '/process' },
-  { key: 'artsAndCrafts', href: '/arts-and-crafts' },
-  { key: 'blog', href: '/blog' },
   { key: 'contact', href: '/contact' },
 ] as const;
 

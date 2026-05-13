@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Field, BilingualField } from './Field';
 import { ImageUpload } from './ImageUpload';
+import { ServicesPicker } from './ServicesPicker';
 import { generateCommissionCopy } from '@/lib/ai/generate-commission';
 import { regenerateSummary } from '@/lib/ai/regenerate-paragraph';
 import { Sparkles } from 'lucide-react';
@@ -269,16 +270,9 @@ export function CommissionForm({
             placeholder="e.g. Q3 2024 — Q1 2025"
           />
         </div>
-        <label className="mt-4 block">
-          <span className="text-xs uppercase tracking-[0.2em] text-text-muted">Services performed</span>
-          <textarea
-            name="services_performed"
-            rows={4}
-            defaultValue={row?.services_performed ?? ''}
-            placeholder={'One per line, e.g.\nDial colour change\nSapphire bezel insert\nHand re-luming'}
-            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
-          />
-        </label>
+        <div className="mt-4">
+          <ServicesPicker defaultValue={row?.services_performed ?? null} />
+        </div>
       </div>
 
       <p className="text-xs text-text-muted -mt-4">

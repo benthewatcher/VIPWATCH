@@ -99,7 +99,8 @@ async function getCommission(slug: string) {
     .eq('commission_id', row.id)
     .eq('hidden', false)
     .order('position');
-  // Manual related list takes precedence; fall back to auto (next 3 by position).
+  // Manual related list takes precedence; otherwise show every other published
+  // commission that shares at least one collection with this one (de-duplicated).
   const relatedIds = ((row as any).related_commission_ids ?? []) as string[];
   let more: Array<{
     id: string;
@@ -116,20 +117,44 @@ async function getCommission(slug: string) {
       .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
       .eq('status', 'published')
       .in('id', relatedIds);
-    // Preserve the curator's order.
     const byId = new Map((data ?? []).map((c) => [c.id, c]));
     more = relatedIds
       .map((id) => byId.get(id))
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
   } else {
-    const { data } = await supabase
-      .from('commissions')
-      .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
-      .eq('status', 'published')
-      .neq('id', row.id)
-      .order('position', { ascending: true })
-      .limit(3);
-    more = data ?? [];
+    // 1. find every collection this commission belongs to
+    const { data: ownLinks } = await (supabase as any)
+      .from('collection_commissions')
+      .select('collection_id')
+      .eq('commission_id', row.id);
+    const collectionIds = ((ownLinks ?? []) as Array<{ collection_id: string }>).map((l) => l.collection_id);
+
+    if (collectionIds.length > 0) {
+      // 2. fetch every other commission in any of those collections, preserving pivot position order
+      const { data: siblingLinks } = await (supabase as any)
+        .from('collection_commissions')
+        .select('commission_id, position')
+        .in('collection_id', collectionIds)
+        .order('position', { ascending: true });
+      const orderedIds: string[] = [];
+      const seen = new Set<string>([row.id]);
+      for (const link of (siblingLinks ?? []) as Array<{ commission_id: string; position: number }>) {
+        if (seen.has(link.commission_id)) continue;
+        seen.add(link.commission_id);
+        orderedIds.push(link.commission_id);
+      }
+      if (orderedIds.length > 0) {
+        const { data } = await supabase
+          .from('commissions')
+          .select('id, slug, title_en, title_fr, watch_model, hero_image, card_image')
+          .eq('status', 'published')
+          .in('id', orderedIds);
+        const byId = new Map((data ?? []).map((c) => [c.id, c]));
+        more = orderedIds
+          .map((id) => byId.get(id))
+          .filter((c): c is NonNullable<typeof c> => Boolean(c));
+      }
+    }
   }
   type Block = {
     id: string;

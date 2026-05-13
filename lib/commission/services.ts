@@ -4,16 +4,16 @@
 // to surface a new service across both sides.
 
 export const CANONICAL_SERVICES = [
-  'Bespoke Dial',
-  'Bespoke Hands',
-  'Bespoke Bezel',
-  'Bespoke Gem Setting',
-  'Bespoke Case',
-  'Bespoke Crown',
-  'Bespoke Bracelet',
-  'Bespoke Strap',
-  'Bespoke Box',
-  'Bespoke Packaging',
+  'Dial',
+  'Hands',
+  'Bezel',
+  'Gem Setting',
+  'Case',
+  'Crown',
+  'Bracelet',
+  'Strap',
+  'Box',
+  'Packaging',
   'Movement Decoration',
   'PVD / DLC Finish',
 ] as const;
@@ -34,9 +34,16 @@ export function serialiseServices(selected: string[], extras: string[]): string 
   return [...selected, ...extras].filter(Boolean).join('\n');
 }
 
-/** Case-insensitive match against the canonical list. */
+/** Strip a leading "Bespoke " (any case) from a line. Lets us migrate
+ * old stored values like "Bespoke Dial" without rewriting the DB. */
+export function stripBespoke(line: string): string {
+  return line.replace(/^\s*bespoke\s+/i, '').trim();
+}
+
+/** Case-insensitive match against the canonical list. Tolerates an optional
+ * leading "Bespoke " prefix on the input so legacy rows still pre-tick. */
 export function canonicalMatch(line: string): CanonicalService | null {
-  const norm = line.trim().toLowerCase();
+  const norm = stripBespoke(line).toLowerCase();
   const hit = CANONICAL_SERVICES.find((s) => s.toLowerCase() === norm);
   return hit ?? null;
 }

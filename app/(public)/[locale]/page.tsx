@@ -311,7 +311,7 @@ function Home({ locale, page, featured, services, collections, heroCollections, 
         </section>
       )}
 
-      {departments.length > 0 && (
+      {false && departments.length > 0 && (
         <section className="border-t border-divider">
           <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
             <SectionIntro

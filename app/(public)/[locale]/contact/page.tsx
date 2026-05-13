@@ -1,20 +1,28 @@
-import { getT } from '@/lib/i18n/t';
-import { PageHeader } from '@/components/site/PageHeader';
-import { EnquiryForm } from '@/components/site/EnquiryForm';
+import { ContactView } from '@/components/site/ContactView';
+import { createClient } from '@/lib/supabase/server';
+import { pickLocale } from '@/lib/i18n/pick';
+import type { Locale } from '@/lib/i18n/config';
+
+export const revalidate = 60;
 
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  return <Content locale={locale} />;
-}
+  const supabase = (await createClient()) as any;
+  const { data } = await supabase
+    .from('pages')
+    .select('hero_heading_en, hero_heading_fr, body_en, body_fr')
+    .eq('key', 'contact')
+    .maybeSingle();
 
-function Content({ locale }: { locale: string }) {
-  const t = getT(locale, 'contact');
+  const loc = locale as Locale;
+  const titleOverride = pickLocale(data, 'hero_heading', loc);
+  const subtitleOverride = pickLocale(data, 'body', loc);
+
   return (
-    <>
-      <PageHeader title={t('title')} subtitle={t('subtitle')} />
-      <section className="mx-auto max-w-3xl px-6 pb-32">
-        <EnquiryForm locale={locale} />
-      </section>
-    </>
+    <ContactView
+      locale={locale}
+      titleOverride={titleOverride ?? null}
+      subtitleOverride={subtitleOverride ?? null}
+    />
   );
 }

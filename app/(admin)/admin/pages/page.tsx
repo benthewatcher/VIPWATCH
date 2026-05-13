@@ -9,6 +9,7 @@ const PAGES = [
   { key: 'arts-and-crafts', label: 'Arts & Crafts', desc: 'Craft showcases' },
   { key: 'warranty', label: 'Warranty', desc: 'International warranty' },
   { key: 'process-intro', label: 'Process intro', desc: 'Header for the process page' },
+  { key: 'contact', label: 'Contact', desc: 'Header above the enquiry form' },
 ];
 
 export default function PagesAdmin() {

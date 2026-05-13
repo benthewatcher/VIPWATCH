@@ -5,7 +5,7 @@ import { ImageUpload } from '@/components/admin/ImageUpload';
 import { createClient } from '@/lib/supabase/server';
 import { updatePage } from '../actions';
 
-const ALLOWED = new Set(['home', 'atelier', 'arts-and-crafts', 'warranty', 'process-intro']);
+const ALLOWED = new Set(['home', 'atelier', 'arts-and-crafts', 'warranty', 'process-intro', 'contact']);
 
 export default async function EditPage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;

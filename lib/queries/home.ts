@@ -115,6 +115,34 @@ export async function getFeaturedTestimonials(limit = 6) {
   }>;
 }
 
+/**
+ * Every non-private collection in display order — used by the home page hero
+ * carousel. Pulls both desktop and mobile cover variants.
+ */
+export async function getCollectionsForHeroCarousel() {
+  const supabase = (await createClient()) as any;
+  const { data } = await supabase
+    .from('commission_collections')
+    .select(
+      'id, slug, name_en, name_fr, project_en, project_fr, cover_image, cover_image_mobile, lookbook_position, position',
+    )
+    .eq('is_private', false)
+    .order('lookbook_position', { ascending: true })
+    .order('position', { ascending: true });
+  return ((data ?? []) as Array<{
+    id: string;
+    slug: string;
+    name_en: string | null;
+    name_fr: string | null;
+    project_en: string | null;
+    project_fr: string | null;
+    cover_image: string | null;
+    cover_image_mobile: string | null;
+    lookbook_position: number;
+    position: number;
+  }>).filter((c) => c.cover_image);
+}
+
 export async function getFeaturedCollections(limit = 2) {
   const supabase = (await createClient()) as any;
   const { data } = await supabase

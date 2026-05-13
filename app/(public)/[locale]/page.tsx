@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { Hero } from '@/components/site/Hero';
+import { HeroCarousel, type HeroSlide } from '@/components/site/HeroCarousel';
 import { FadeUp } from '@/components/site/FadeUp';
 import { SectionIntro } from '@/components/site/SectionIntro';
 import { CommissionCard } from '@/components/site/CommissionCard';
-import { getHomePage, getFeaturedCommissions, getServicesForGrid, getFeaturedCollections, getDepartments, getFeaturedTestimonials, getHomeBlocks, getProcessSteps } from '@/lib/queries/home';
-import { publicMediaUrl } from '@/lib/utils/storage';
+import { getHomePage, getFeaturedCommissions, getServicesForGrid, getFeaturedCollections, getCollectionsForHeroCarousel, getDepartments, getFeaturedTestimonials, getHomeBlocks, getProcessSteps } from '@/lib/queries/home';
+import { mobileCoverUrl, publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
 import { getT } from '@/lib/i18n/t';
@@ -17,11 +18,12 @@ export const dynamic = 'force-dynamic';
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const [page, featured, services, collections, departments, testimonials, blocks, processSteps] = await Promise.all([
+  const [page, featured, services, collections, heroCollections, departments, testimonials, blocks, processSteps] = await Promise.all([
     getHomePage(),
     getFeaturedCommissions(3),
     getServicesForGrid(4),
     getFeaturedCollections(2),
+    getCollectionsForHeroCarousel(),
     getDepartments(),
     getFeaturedTestimonials(6),
     getHomeBlocks(),
@@ -34,6 +36,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       featured={featured}
       services={services}
       collections={collections}
+      heroCollections={heroCollections}
       departments={departments}
       testimonials={testimonials}
       atelier={blocks.get('atelier_intro') ?? null}
@@ -50,6 +53,7 @@ type HomeProps = {
   featured: Array<{ id: string; slug: string; card_image: string | null; hero_image: string | null; title_en: string; title_fr: string; watch_model: string | null }>;
   services: Array<{ id: string; slug: string; title_en: string; title_fr: string; position: number }>;
   collections: Array<{ id: string; slug: string; name_en: string | null; name_fr: string | null; project_en: string | null; project_fr: string | null; cover_image: string | null; position: number }>;
+  heroCollections: Array<{ id: string; slug: string; name_en: string | null; name_fr: string | null; project_en: string | null; project_fr: string | null; cover_image: string | null; cover_image_mobile: string | null }>;
   departments: Array<{ id: string; slug: string; title_en: string | null; title_fr: string | null; body_en: string | null; body_fr: string | null; image: string | null; link_url: string | null; link_label_en: string | null; link_label_fr: string | null; position: number }>;
   testimonials: Array<{ id: string; client_name: string; client_role: string | null; quote_en: string; quote_fr: string | null; photo_url: string | null; backdrop_image: string | null; position: number }>;
   atelier: HomeBlock | null;
@@ -73,7 +77,7 @@ type HomeBlock = {
   image: string | null;
 };
 
-function Home({ locale, page, featured, services, collections, departments, testimonials, atelier, processBlock, ctaStrip, processSteps }: HomeProps) {
+function Home({ locale, page, featured, services, collections, heroCollections, departments, testimonials, atelier, processBlock, ctaStrip, processSteps }: HomeProps) {
   const t = getT(locale, 'home');
   const heroHeading = pickLocale(page, 'hero_heading', locale) ?? t('heroHeading');
   const intro = pickLocale(page, 'body', locale) ?? t('intro');
@@ -82,26 +86,44 @@ function Home({ locale, page, featured, services, collections, departments, test
   const heroImg = publicMediaUrl(page?.hero_image as string | null);
   const heroImgMobile = publicMediaUrl(page?.hero_image_mobile as string | null);
 
+  const heroSlides: HeroSlide[] = heroCollections.flatMap((c) => {
+    const image = publicMediaUrl(c.cover_image);
+    if (!image) return [];
+    return [{
+      id: c.id,
+      href: `/${locale}/collections/${c.slug}`,
+      title: pickLocale(c, 'name', locale) ?? '',
+      eyebrow: pickLocale(c, 'project', locale),
+      ctaLabel: locale === 'ar' ? 'Découvrir la collection' : 'Explore collection',
+      image,
+      imageMobile: mobileCoverUrl(c.cover_image, c.cover_image_mobile),
+    }];
+  });
+
   return (
     <>
-      <Hero image={heroImg ?? undefined} imageMobile={heroImgMobile ?? undefined} alt={heroHeading}>
-        <FadeUp>
-          <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl max-w-4xl tracking-tight leading-[1.05]">
-            {heroHeading}
-          </h1>
-        </FadeUp>
-        <FadeUp delay={0.15}>
-          <p className="mt-8 max-w-xl text-lg text-text-muted">{intro}</p>
-        </FadeUp>
-        <FadeUp delay={0.3}>
-          <Link
-            href={ctaHref}
-            className="inline-block mt-12 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
-          >
-            {ctaLabel}
-          </Link>
-        </FadeUp>
-      </Hero>
+      {heroSlides.length > 0 ? (
+        <HeroCarousel slides={heroSlides} />
+      ) : (
+        <Hero image={heroImg ?? undefined} imageMobile={heroImgMobile ?? undefined} alt={heroHeading}>
+          <FadeUp>
+            <h1 className="font-serif text-5xl md:text-7xl lg:text-8xl max-w-4xl tracking-tight leading-[1.05]">
+              {heroHeading}
+            </h1>
+          </FadeUp>
+          <FadeUp delay={0.15}>
+            <p className="mt-8 max-w-xl text-lg text-text-muted">{intro}</p>
+          </FadeUp>
+          <FadeUp delay={0.3}>
+            <Link
+              href={ctaHref}
+              className="inline-block mt-12 border border-accent px-10 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
+            >
+              {ctaLabel}
+            </Link>
+          </FadeUp>
+        </Hero>
+      )}
 
       {featured.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-24 md:py-32">

@@ -4,6 +4,8 @@ import { Field } from '@/components/admin/Field';
 import { ImageUpload } from '@/components/admin/ImageUpload';
 import { HomeBlockForm } from '@/components/admin/HomeBlockForm';
 import { createClient } from '@/lib/supabase/server';
+import { publicMediaUrl } from '@/lib/utils/storage';
+import { getCollectionsForHeroCarousel } from '@/lib/queries/home';
 import { updateHomeBlock, type HomeBlockKey } from './actions';
 
 export const metadata = { title: 'Home page' };
@@ -39,12 +41,72 @@ export default async function AdminHomePage() {
     .select('block_key, is_visible, eyebrow_en, eyebrow_fr, title_en, title_fr, body_en, body_fr, cta_label_en, cta_label_fr, cta_url, image');
   const byKey = new Map(((rows ?? []) as any[]).map((r) => [r.block_key, r]));
 
+  const heroSlides = await getCollectionsForHeroCarousel();
+
   const keys: HomeBlockKey[] = ['atelier_intro', 'process_teaser', 'cta_strip'];
 
   return (
     <>
       <AdminHeader title="Home page" />
       <main className="p-10 grid gap-12">
+        <section className="border border-divider p-8 max-w-5xl">
+          <div className="flex items-start justify-between gap-6 mb-6">
+            <div>
+              <h2 className="font-serif text-2xl">Hero carousel</h2>
+              <p className="text-xs text-text-muted mt-1 max-w-xl">
+                The home page hero auto-populates one slide per non-private collection,
+                in lookbook order. To change an image, eyebrow, title, or order, edit the
+                collection itself — there's nothing else to set here.
+              </p>
+            </div>
+            <Link
+              href="/admin/collections"
+              className="text-xs uppercase tracking-[0.2em] text-accent hover:underline whitespace-nowrap"
+            >
+              Manage collections →
+            </Link>
+          </div>
+
+          {heroSlides.length === 0 ? (
+            <p className="text-sm text-text-muted">
+              No public collections yet. Once you publish one with a cover image, it appears here.
+            </p>
+          ) : (
+            <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {heroSlides.map((c, i) => {
+                const url = publicMediaUrl(c.cover_image);
+                return (
+                  <li key={c.id}>
+                    <Link
+                      href={`/admin/collections/${c.id}`}
+                      className="group block relative aspect-[16/10] overflow-hidden bg-bg-secondary border border-divider hover:border-accent transition-colors"
+                    >
+                      {url && (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={url}
+                          alt={c.name_en ?? ''}
+                          className="absolute inset-0 w-full h-full object-cover"
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                      <div className="absolute inset-x-0 bottom-0 p-3 flex items-end justify-between gap-2 text-white">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-[0.3em] text-accent">{String(i + 1).padStart(2, '0')}</p>
+                          <p className="font-serif text-xl leading-tight">{c.name_en ?? c.slug}</p>
+                        </div>
+                        <span className="text-[10px] uppercase tracking-[0.2em] opacity-0 group-hover:opacity-100 transition-opacity">
+                          Edit →
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </section>
+
         <div className="bg-bg-secondary/30 border border-divider p-6 max-w-4xl">
           <p className="text-xs uppercase tracking-[0.2em] text-text-muted">Other home content</p>
           <ul className="mt-3 grid gap-2 text-sm">

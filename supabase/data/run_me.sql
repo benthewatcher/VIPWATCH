@@ -37,6 +37,12 @@ alter table commissions
   add column if not exists services_performed text,
   add column if not exists timeline text;
 
+alter table pages
+  add column if not exists success_title_en text,
+  add column if not exists success_title_fr text,
+  add column if not exists success_body_en text,
+  add column if not exists success_body_fr text;
+
 -- ---------------------------------------------------------------------------
 -- 2. Process steps — replace with the canonical 6 steps
 -- ---------------------------------------------------------------------------

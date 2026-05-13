@@ -20,6 +20,10 @@ const pageSchema = z.object({
   meta_title_fr: z.string().nullable().optional(),
   meta_description_en: z.string().nullable().optional(),
   meta_description_fr: z.string().nullable().optional(),
+  success_title_en: z.string().nullable().optional(),
+  success_title_fr: z.string().nullable().optional(),
+  success_body_en: z.string().nullable().optional(),
+  success_body_fr: z.string().nullable().optional(),
 });
 
 export async function updatePage(key: string, form: FormData) {
@@ -39,6 +43,10 @@ export async function updatePage(key: string, form: FormData) {
     meta_title_fr: form.get('meta_title_fr') || null,
     meta_description_en: form.get('meta_description_en') || null,
     meta_description_fr: form.get('meta_description_fr') || null,
+    success_title_en: form.get('success_title_en') || null,
+    success_title_fr: form.get('success_title_fr') || null,
+    success_body_en: form.get('success_body_en') || null,
+    success_body_fr: form.get('success_body_fr') || null,
   });
 
   const supabase = (await createClient()) as any;

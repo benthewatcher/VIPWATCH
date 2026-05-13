@@ -50,6 +50,16 @@ export default async function EditPage({ params }: { params: Promise<{ key: stri
 
           <BilingualField label="Body / intro copy" field="body" row={r} textarea rows={6} />
 
+          {key === 'contact' && (
+            <div className="border-t border-divider pt-6 grid gap-6">
+              <p className="text-xs uppercase tracking-[0.2em] text-text-muted">
+                Success message <span className="ml-2 normal-case tracking-normal text-text-muted/60">(shown after the form is submitted)</span>
+              </p>
+              <BilingualField label="Success title" field="success_title" row={r} />
+              <BilingualField label="Success body" field="success_body" row={r} textarea rows={3} />
+            </div>
+          )}
+
           <details className="border-t border-divider pt-6">
             <summary className="cursor-pointer text-xs uppercase tracking-[0.2em] text-text-muted">SEO metadata</summary>
             <div className="mt-6 grid gap-6">

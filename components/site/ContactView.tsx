@@ -8,10 +8,14 @@ export function ContactView({
   locale,
   titleOverride,
   subtitleOverride,
+  successTitleOverride,
+  successBodyOverride,
 }: {
   locale: string;
   titleOverride?: string | null;
   subtitleOverride?: string | null;
+  successTitleOverride?: string | null;
+  successBodyOverride?: string | null;
 }) {
   const t = getT(locale, 'contact');
   const f = getT(locale, 'contact.fields');
@@ -45,16 +49,18 @@ export function ContactView({
   }
 
   if (done) {
+    const defaultTitle = locale === 'ar' ? 'Vous avez fait une demande' : 'You have made a request';
+    const defaultBody = locale === 'ar' ? 'Merci. Nous reviendrons vers vous très prochainement.' : "Thank you. We'll be in touch shortly.";
     return (
       <section className="mx-auto max-w-3xl px-6 py-32 md:py-40 text-center">
         <p className="text-[11px] uppercase tracking-[0.4em] text-accent">
           {locale === 'ar' ? 'Demande envoyée' : 'Request received'}
         </p>
         <h1 className="font-serif text-5xl md:text-6xl mt-4 tracking-tight">
-          {locale === 'ar' ? 'Vous avez fait une demande' : 'You have made a request'}
+          {successTitleOverride || defaultTitle}
         </h1>
-        <p className="mt-6 text-text-muted text-base md:text-lg max-w-xl mx-auto">
-          {locale === 'ar' ? 'Merci. Nous reviendrons vers vous très prochainement.' : "Thank you. We'll be in touch shortly."}
+        <p className="mt-6 text-text-muted text-base md:text-lg max-w-xl mx-auto whitespace-pre-line">
+          {successBodyOverride || defaultBody}
         </p>
       </section>
     );

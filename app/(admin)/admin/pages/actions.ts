@@ -51,7 +51,17 @@ export async function updatePage(key: string, form: FormData) {
 
   const supabase = (await createClient()) as any;
   const { error } = await supabase.from('pages').upsert(data, { onConflict: 'key' });
-  if (error) throw new Error(error.message);
+
+  // If the new success_* columns aren't on the DB yet, retry without them so
+  // saves on other pages don't break before the migration is applied.
+  if (error && /success_(title|body)_(en|fr)/.test(error.message)) {
+    const { success_title_en, success_title_fr, success_body_en, success_body_fr, ...rest } = data;
+    void success_title_en; void success_title_fr; void success_body_en; void success_body_fr;
+    const retry = await supabase.from('pages').upsert(rest, { onConflict: 'key' });
+    if (retry.error) throw new Error(retry.error.message);
+  } else if (error) {
+    throw new Error(error.message);
+  }
 
   revalidatePath('/admin/pages');
   revalidatePath(`/admin/pages/${key}`);

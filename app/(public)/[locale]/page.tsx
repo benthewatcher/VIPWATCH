@@ -402,48 +402,8 @@ function Home({ locale, page, featured, services, collections, heroCollections, 
         </section>
       )}
 
-      {ctaStrip && (ctaStrip.title_en || ctaStrip.body_en || ctaStrip.cta_url || ctaStrip.image) && (
-        <section className="relative border-t border-divider overflow-hidden">
-          {ctaStrip.image && (
-            <>
-              <Image
-                src={publicMediaUrl(ctaStrip.image) ?? ''}
-                alt=""
-                aria-hidden="true"
-                fill
-                sizes="100vw"
-                className="object-cover opacity-30"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-bg-primary via-bg-primary/80 to-bg-primary/50" />
-            </>
-          )}
-          <div className="relative mx-auto max-w-4xl px-6 py-32 md:py-40 text-center">
-            <FadeUp>
-              {pickLocale(ctaStrip, 'eyebrow', locale) && (
-                <p className="text-xs uppercase tracking-[0.3em] text-accent">
-                  {pickLocale(ctaStrip, 'eyebrow', locale)}
-                </p>
-              )}
-              <h2 className="font-serif text-5xl md:text-6xl mt-4 tracking-tight leading-[1.05]">
-                {pickLocale(ctaStrip, 'title', locale)}
-              </h2>
-              {pickLocale(ctaStrip, 'body', locale) && (
-                <p className="mt-6 max-w-xl mx-auto text-lg text-text-muted">
-                  {pickLocale(ctaStrip, 'body', locale)}
-                </p>
-              )}
-              {ctaStrip.cta_url && (
-                <Link
-                  href={ctaStrip.cta_url}
-                  className="inline-block mt-10 border border-accent px-12 py-4 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
-                >
-                  {pickLocale(ctaStrip, 'cta_label', locale) || (locale === 'ar' ? 'ابدأ التكليف' : 'Begin a commission')}
-                </Link>
-              )}
-            </FadeUp>
-          </div>
-        </section>
-      )}
+      {/* "Begin a commission" CTA strip is now rendered by the locale layout
+          for every page; image still configured in /admin/home → cta_strip. */}
     </>
   );
 }

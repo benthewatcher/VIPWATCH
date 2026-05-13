@@ -5,7 +5,6 @@ import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
 import { CommissionSpec } from '@/components/site/CommissionSpec';
-import { BeginCommissionCTA } from '@/components/site/BeginCommissionCTA';
 import { ThemeForce } from '@/components/site/ThemeForce';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
@@ -312,7 +311,6 @@ export default async function CommissionDetail({
         </section>
       )}
 
-      <BeginCommissionCTA locale={loc} />
     </article>
   );
 }

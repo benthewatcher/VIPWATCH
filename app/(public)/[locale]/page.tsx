@@ -5,7 +5,7 @@ import { HeroCarousel, type HeroSlide } from '@/components/site/HeroCarousel';
 import { FadeUp } from '@/components/site/FadeUp';
 import { SectionIntro } from '@/components/site/SectionIntro';
 import { CommissionCard } from '@/components/site/CommissionCard';
-import { getHomePage, getFeaturedCommissions, getServicesForGrid, getFeaturedCollections, getCollectionsForHeroCarousel, getDepartments, getFeaturedTestimonials, getHomeBlocks, getProcessSteps } from '@/lib/queries/home';
+import { getHomePage, getOneCommissionPerCollection, getServicesForGrid, getFeaturedCollections, getCollectionsForHeroCarousel, getDepartments, getFeaturedTestimonials, getHomeBlocks, getProcessSteps } from '@/lib/queries/home';
 import { mobileCoverUrl, publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
@@ -20,7 +20,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const [page, featured, services, collections, heroCollections, departments, testimonials, blocks, processSteps] = await Promise.all([
     getHomePage(),
-    getFeaturedCommissions(3),
+    getOneCommissionPerCollection(),
     getServicesForGrid(4),
     getFeaturedCollections(2),
     getCollectionsForHeroCarousel(),
@@ -148,7 +148,7 @@ function Home({ locale, page, featured, services, collections, heroCollections, 
         </section>
       )}
 
-      {atelier && (atelier.title_en || atelier.body_en || atelier.eyebrow_en || atelier.image) && (
+      {atelier && atelier.is_visible !== false && (atelier.title_en || atelier.body_en || atelier.eyebrow_en || atelier.image) && (
         <section className="border-t border-divider">
           <div className="mx-auto max-w-7xl px-6 py-24 md:py-32 grid gap-16 md:grid-cols-2 items-center">
             {atelier.image && (
@@ -191,7 +191,7 @@ function Home({ locale, page, featured, services, collections, heroCollections, 
         </section>
       )}
 
-      {processSteps.length > 0 && (
+      {processSteps.length > 0 && (!processBlock || processBlock.is_visible !== false) && (
         <section className="border-t border-divider">
           <div className="mx-auto max-w-7xl px-6 py-24 md:py-32">
             <SectionIntro

@@ -6,6 +6,71 @@ export async function getHomePage() {
   return data;
 }
 
+/**
+ * One representative commission per non-private collection, in collection
+ * display order. The "representative" is the first commission in each
+ * collection's pivot ordering (whatever the admin dragged to position 0).
+ * Used by the home page "Recent commissions" row so every collection gets
+ * one card without curating a separate "featured" list.
+ */
+export async function getOneCommissionPerCollection() {
+  const supabase = (await createClient()) as any;
+
+  const { data: cols } = await supabase
+    .from('commission_collections')
+    .select('id, lookbook_position, position')
+    .eq('is_private', false)
+    .order('lookbook_position', { ascending: true })
+    .order('position', { ascending: true });
+  const collections = (cols ?? []) as Array<{ id: string }>;
+  if (collections.length === 0) return [];
+
+  const { data: pivot } = await supabase
+    .from('collection_commissions')
+    .select('collection_id, commission_id, position')
+    .in('collection_id', collections.map((c) => c.id))
+    .order('position', { ascending: true });
+
+  // Pick the FIRST commission_id we see for each collection (lowest position).
+  const firstPerCollection = new Map<string, string>();
+  for (const link of (pivot ?? []) as Array<{ collection_id: string; commission_id: string }>) {
+    if (!firstPerCollection.has(link.collection_id)) {
+      firstPerCollection.set(link.collection_id, link.commission_id);
+    }
+  }
+
+  // Preserve collection order, dedupe in case a commission is in two collections.
+  const orderedCommIds: string[] = [];
+  const seen = new Set<string>();
+  for (const c of collections) {
+    const cid = firstPerCollection.get(c.id);
+    if (cid && !seen.has(cid)) {
+      seen.add(cid);
+      orderedCommIds.push(cid);
+    }
+  }
+  if (orderedCommIds.length === 0) return [];
+
+  const { data: comms } = await supabase
+    .from('commissions')
+    .select('id, slug, card_image, hero_image, title_en, title_fr, watch_model')
+    .eq('status', 'published')
+    .in('id', orderedCommIds);
+
+  const byId = new Map((comms ?? []).map((c: any) => [c.id, c]));
+  return orderedCommIds
+    .map((id) => byId.get(id))
+    .filter((c): c is NonNullable<typeof c> => Boolean(c)) as Array<{
+      id: string;
+      slug: string;
+      card_image: string | null;
+      hero_image: string | null;
+      title_en: string;
+      title_fr: string;
+      watch_model: string | null;
+    }>;
+}
+
 export async function getFeaturedCommissions(limit = 3) {
   const supabase = await createClient();
   const { data } = await supabase

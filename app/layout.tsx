@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Cormorant_Garamond, Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/site/ThemeProvider';
+import { Analytics } from '@/components/site/Analytics';
 import './globals.css';
 
 const serif = Cormorant_Garamond({
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={`${serif.variable} ${sans.variable} h-full antialiased`}>
       <body suppressHydrationWarning className="bg-bg-primary text-text-primary min-h-full flex flex-col font-sans">
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

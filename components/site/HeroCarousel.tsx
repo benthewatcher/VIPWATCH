@@ -22,7 +22,7 @@ export type HeroSlide = {
  */
 export function HeroCarousel({
   slides,
-  intervalMs = 6000,
+  intervalMs = 2000,
 }: {
   slides: HeroSlide[];
   intervalMs?: number;

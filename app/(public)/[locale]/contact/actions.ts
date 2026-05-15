@@ -75,12 +75,29 @@ export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResult>
         'Message:',
         input.message,
       ].filter(Boolean);
+      // a) Internal notification to the atelier
       await resend.emails.send({
         from,
         to: TO_ADDRESSES,
         replyTo: input.email,
         subject,
         text: lines.join('\n'),
+      });
+
+      // b) Auto-confirmation to the enquirer
+      const ar = input.source_locale === 'ar';
+      const confirmSubject = ar
+        ? 'Demande reçue — VIP WATCH'
+        : 'Request received — VIP WATCH';
+      const confirmBody = ar
+        ? `Bonjour ${input.name.split(' ')[0]},\n\nMerci pour votre message. Nous l'examinons et reviendrons vers vous dans la semaine pour convenir d'un échange.\n\nVotre demande :\n\n${input.message}\n\n— VIP WATCH`
+        : `Hello ${input.name.split(' ')[0]},\n\nThank you for your message. We're reviewing it and will be in touch within a week to arrange a time to talk.\n\nYour request:\n\n${input.message}\n\n— VIP WATCH`;
+      await resend.emails.send({
+        from,
+        to: [input.email],
+        replyTo: TO_ADDRESSES[0],
+        subject: confirmSubject,
+        text: confirmBody,
       });
     } catch (e) {
       console.error('[enquiry] Resend failed (non-fatal):', e);

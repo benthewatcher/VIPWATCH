@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen flex bg-bg-primary text-text-primary">
-      <aside className="w-64 border-r border-divider px-6 py-8 hidden lg:flex flex-col">
+      <aside className="w-64 border-r border-divider px-6 py-8 hidden md:flex flex-col">
         <div className="font-serif text-xl tracking-[0.25em] uppercase mb-10">VIP WATCH</div>
         <nav className="flex flex-col gap-1 flex-1">
           {adminNav.map((i) => (

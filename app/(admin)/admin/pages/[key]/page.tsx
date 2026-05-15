@@ -43,10 +43,14 @@ export default async function EditPage({ params }: { params: Promise<{ key: stri
 
           <BilingualField label="Hero heading" field="hero_heading" row={r} />
 
-          <div className="grid md:grid-cols-2 gap-6">
-            <BilingualField label="CTA label" field="hero_cta_label" row={r} />
-            <Field label="CTA link" name="hero_cta_href" defaultValue={(r.hero_cta_href as string) ?? ''} placeholder="/contact" />
-          </div>
+          {key === 'atelier' || key === 'arts-and-crafts' || key === 'warranty' || key === 'process-intro' ? (
+            <BilingualField label="Eyebrow (small label above title)" field="hero_cta_label" row={r} />
+          ) : (
+            <div className="grid md:grid-cols-2 gap-6">
+              <BilingualField label="CTA label" field="hero_cta_label" row={r} />
+              <Field label="CTA link" name="hero_cta_href" defaultValue={(r.hero_cta_href as string) ?? ''} placeholder="/contact" />
+            </div>
+          )}
 
           <BilingualField label="Body / intro copy" field="body" row={r} textarea rows={6} />
 

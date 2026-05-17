@@ -43,6 +43,51 @@ alter table pages
   add column if not exists success_body_en text,
   add column if not exists success_body_fr text;
 
+create table if not exists invites (
+  id uuid primary key default gen_random_uuid(),
+  token text unique not null,
+  label text not null,
+  phone text,
+  email text,
+  notes text,
+  max_uses int,
+  used_count int not null default 0,
+  expires_at timestamptz not null default now() + interval '30 days',
+  is_revoked boolean not null default false,
+  created_by uuid references profiles(id),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists invites_token_idx on invites(token);
+create index if not exists invites_active_idx on invites(is_revoked, expires_at)
+  where is_revoked = false;
+
+create table if not exists invite_uses (
+  id uuid primary key default gen_random_uuid(),
+  invite_id uuid not null references invites(id) on delete cascade,
+  ip_hash text,
+  user_agent text,
+  used_at timestamptz not null default now()
+);
+
+create index if not exists invite_uses_invite_idx on invite_uses(invite_id, used_at desc);
+
+alter table invites enable row level security;
+alter table invite_uses enable row level security;
+
+drop policy if exists "admin all on invites" on invites;
+create policy "admin all on invites" on invites for all
+  using (is_admin()) with check (is_admin());
+
+drop policy if exists "admin all on invite_uses" on invite_uses;
+create policy "admin all on invite_uses" on invite_uses for all
+  using (is_admin()) with check (is_admin());
+
+create or replace function increment_invite_used(_invite_id uuid)
+returns void language sql security definer as $$
+  update invites set used_count = used_count + 1 where id = _invite_id;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- 2. Process steps — replace with the canonical 6 steps
 -- ---------------------------------------------------------------------------

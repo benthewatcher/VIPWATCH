@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 import { createAnonClient } from '@/lib/supabase/anon';
 import { createSessionCookie, hashIp } from '@/lib/auth/invite-session';
 
@@ -19,15 +18,23 @@ type Invite = {
 };
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
+  try {
+    return await handle(req, ctx);
+  } catch (e) {
+    // Log the actual error to Vercel function logs so we can diagnose.
+    console.error('[invite] unhandled error in /i/[token]:', e);
+    return NextResponse.redirect(new URL('/waitlist?reason=invalid', req.url));
+  }
+}
+
+async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
 
   if (!token || token.length < 6) {
     return NextResponse.redirect(new URL('/waitlist?reason=missing', req.url));
   }
 
-  // Anon client can read the invites table only with admin RLS, so we use a
-  // server-side helper that runs with the cookie session. For invite lookup
-  // we need to bypass RLS — use the service role client.
+  // For invite lookup we need to bypass RLS — use the service-role client when available.
   const supabase = (await getServiceClient()) as any;
 
   const { data: invite, error } = await supabase
@@ -36,7 +43,11 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
     .eq('token', token)
     .maybeSingle();
 
-  if (error || !invite) {
+  if (error) {
+    console.error('[invite] lookup error:', error.message);
+    return NextResponse.redirect(new URL('/waitlist?reason=invalid', req.url));
+  }
+  if (!invite) {
     return NextResponse.redirect(new URL('/waitlist?reason=invalid', req.url));
   }
   const inv = invite as Invite;
@@ -51,23 +62,25 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
     return NextResponse.redirect(new URL('/waitlist?reason=used', req.url));
   }
 
-  // Log the use (non-blocking conceptually, but await so it's persisted).
+  // Log the use (best-effort, don't fail the sign-in if logging fails).
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
   const ua = req.headers.get('user-agent') ?? '';
-  await supabase.from('invite_uses').insert({
+  const { error: logErr } = await supabase.from('invite_uses').insert({
     invite_id: inv.id,
     ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
+  if (logErr) console.warn('[invite] invite_uses insert failed (non-fatal):', logErr.message);
 
-  // Bump used_count atomically via SQL increment.
-  await supabase.rpc('increment_invite_used', { _invite_id: inv.id }).catch(async () => {
-    // Fallback if RPC isn't installed: do a non-atomic update.
-    await supabase
+  // Bump used_count. Try RPC first; if it doesn't exist, fall back to plain update.
+  const rpc = await supabase.rpc('increment_invite_used', { _invite_id: inv.id });
+  if (rpc.error) {
+    const { error: updErr } = await supabase
       .from('invites')
       .update({ used_count: inv.used_count + 1 })
       .eq('id', inv.id);
-  });
+    if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
+  }
 
   // Set the cookie and bounce them to the home page.
   const cookie = await createSessionCookie(inv.id);
@@ -80,13 +93,9 @@ async function getServiceClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
-    // Local dev without service key — fall back to anon (will fail RLS).
+    console.warn('[invite] SUPABASE_SERVICE_ROLE_KEY not set; falling back to anon (RLS will block).');
     return createAnonClient();
   }
   const { createClient: createSb } = await import('@supabase/supabase-js');
   return createSb(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
 }
-
-// Touch createClient so the import doesn't get tree-shaken; reserved for future
-// use if we want to read session-aware data here.
-void createClient;

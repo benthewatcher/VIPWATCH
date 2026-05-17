@@ -56,7 +56,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   const ua = req.headers.get('user-agent') ?? '';
   await supabase.from('invite_uses').insert({
     invite_id: inv.id,
-    ip_hash: ip ? hashIp(ip) : null,
+    ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
 
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   });
 
   // Set the cookie and bounce them to the home page.
-  const cookie = createSessionCookie(inv.id);
+  const cookie = await createSessionCookie(inv.id);
   const res = NextResponse.redirect(new URL('/en', req.url));
   res.cookies.set(cookie);
   return res;

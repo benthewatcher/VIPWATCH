@@ -23,7 +23,7 @@ function isPublicPath(pathname: string): boolean {
   return false;
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Locale normalisation.
@@ -40,7 +40,7 @@ export function middleware(req: NextRequest) {
 
   // Invite gate.
   if (!isPublicPath(pathname)) {
-    const session = verifySessionCookie(req.cookies.get(COOKIE_NAME)?.value);
+    const session = await verifySessionCookie(req.cookies.get(COOKIE_NAME)?.value);
     if (!session) {
       const url = req.nextUrl.clone();
       url.pathname = '/waitlist';

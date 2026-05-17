@@ -1,14 +1,7 @@
 // Signed-cookie session for invite-only public access.
 //
-// We don't use Supabase Auth on the public side (admin keeps using it). When
-// a visitor taps a valid /i/<token> link we set a single signed cookie that
-// the middleware checks for every request to /[locale]/*.
-//
-// Cookie format: `<base64url(payload)>.<hex(hmac_sha256(payload))>`
-// Payload is JSON `{ iid: <invite id>, exp: <unix seconds>, iat: ... }`.
-// Signed with INVITE_SESSION_SECRET — must be set in env. 32+ random chars.
-
-import crypto from 'node:crypto';
+// Uses Web Crypto (works in both Edge and Node runtimes) so this module can
+// be imported by middleware AND server actions without bundler errors.
 
 export const COOKIE_NAME = 'vipw_session';
 const DAYS = 60;
@@ -23,35 +16,73 @@ export type SessionPayload = {
 function getSecret(): string {
   const s = process.env[SECRET_ENV];
   if (!s || s.length < 16) {
-    // Fall back to anon key so dev still works if env not set — DO NOT rely
-    // on this in production, set INVITE_SESSION_SECRET explicitly.
     return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'dev-fallback-secret-not-for-prod';
   }
   return s;
 }
 
-function b64urlEncode(buf: Buffer | string): string {
-  return Buffer.from(buf).toString('base64').replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
+const enc = new TextEncoder();
+
+function b64urlFromBytes(bytes: ArrayBuffer | Uint8Array): string {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let s = '';
+  for (let i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]);
+  return btoa(s).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
 
-function b64urlDecode(str: string): Buffer {
+function b64urlFromString(str: string): string {
+  return b64urlFromBytes(enc.encode(str));
+}
+
+function b64urlDecode(str: string): Uint8Array {
   const pad = str.length % 4 === 0 ? '' : '='.repeat(4 - (str.length % 4));
-  return Buffer.from(str.replace(/-/g, '+').replace(/_/g, '/') + pad, 'base64');
+  const bin = atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
-function sign(payload: string): string {
-  return crypto.createHmac('sha256', getSecret()).update(payload).digest('hex');
+function bytesToHex(bytes: ArrayBuffer | Uint8Array): string {
+  const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+  let s = '';
+  for (let i = 0; i < u8.length; i++) {
+    s += u8[i].toString(16).padStart(2, '0');
+  }
+  return s;
 }
 
-export function createSessionCookie(inviteId: string, ttlDays: number = DAYS) {
+async function getHmacKey(): Promise<CryptoKey> {
+  return crypto.subtle.importKey(
+    'raw',
+    enc.encode(getSecret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign', 'verify'],
+  );
+}
+
+async function sign(payload: string): Promise<string> {
+  const key = await getHmacKey();
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+  return bytesToHex(sig);
+}
+
+function timingSafeEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return mismatch === 0;
+}
+
+export async function createSessionCookie(inviteId: string, ttlDays: number = DAYS) {
   const now = Math.floor(Date.now() / 1000);
   const payload: SessionPayload = {
     iid: inviteId,
     iat: now,
     exp: now + ttlDays * 24 * 60 * 60,
   };
-  const body = b64urlEncode(JSON.stringify(payload));
-  const sig = sign(body);
+  const body = b64urlFromString(JSON.stringify(payload));
+  const sig = await sign(body);
   return {
     name: COOKIE_NAME,
     value: `${body}.${sig}`,
@@ -63,21 +94,19 @@ export function createSessionCookie(inviteId: string, ttlDays: number = DAYS) {
   };
 }
 
-export function verifySessionCookie(value: string | undefined | null): SessionPayload | null {
+export async function verifySessionCookie(
+  value: string | undefined | null,
+): Promise<SessionPayload | null> {
   if (!value) return null;
   const idx = value.lastIndexOf('.');
   if (idx <= 0) return null;
   const body = value.slice(0, idx);
   const sig = value.slice(idx + 1);
-  const expected = sign(body);
-  if (
-    sig.length !== expected.length ||
-    !crypto.timingSafeEqual(Buffer.from(sig, 'hex'), Buffer.from(expected, 'hex'))
-  ) {
-    return null;
-  }
+  const expected = await sign(body);
+  if (!timingSafeEqualHex(sig, expected)) return null;
   try {
-    const payload = JSON.parse(b64urlDecode(body).toString('utf8')) as SessionPayload;
+    const json = new TextDecoder().decode(b64urlDecode(body));
+    const payload = JSON.parse(json) as SessionPayload;
     if (!payload.iid || !payload.exp || payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {
@@ -97,21 +126,21 @@ export function clearSessionCookie() {
   };
 }
 
-/** Hash an IP (best-effort dedupe / abuse signal) without storing the raw IP. */
-export function hashIp(ip: string): string {
-  return crypto.createHash('sha256').update(ip + '|' + getSecret()).digest('hex').slice(0, 32);
+export async function hashIp(ip: string): Promise<string> {
+  const data = enc.encode(ip + '|' + getSecret());
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return bytesToHex(digest).slice(0, 32);
 }
 
-/** Generate a human-friendly URL-safe token in the format ABCD-EFGH-IJKL. */
+const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+
 export function generateInviteToken(): string {
-  // Crockford-style base32, no easily-confused characters
-  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  const chunks = [0, 0, 0].map(() => {
-    let s = '';
-    for (let i = 0; i < 4; i++) {
-      s += alphabet[crypto.randomInt(alphabet.length)];
-    }
-    return s;
-  });
-  return chunks.join('-');
+  const out: string[] = [];
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  for (let i = 0; i < 12; i++) {
+    out.push(TOKEN_ALPHABET[bytes[i] % TOKEN_ALPHABET.length]);
+    if (i === 3 || i === 7) out.push('-');
+  }
+  return out.join('');
 }

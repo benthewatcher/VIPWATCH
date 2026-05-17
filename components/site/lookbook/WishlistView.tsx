@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { LookbookCard } from './LookbookCard';
+import { ShareWishlist } from './ShareWishlist';
 import { getWishlist, subscribe } from '@/lib/wishlist/local';
 import { pickLocale } from '@/lib/i18n/pick';
 import { publicMediaUrl } from '@/lib/utils/storage';
@@ -52,10 +53,11 @@ export function WishlistView({ locale }: { locale: Locale }) {
 
   return (
     <section className="mx-auto max-w-7xl px-6 py-16 md:py-24">
-      <header className="mb-12">
+      <header className="mb-12 flex flex-wrap items-end justify-between gap-6">
         <h1 className="font-serif text-5xl md:text-6xl">
           {locale === 'ar' ? 'قائمة الرغبات' : 'Wishlist'}
         </h1>
+        {rows.length > 0 && <ShareWishlist />}
       </header>
 
       {ids === null || loading ? (

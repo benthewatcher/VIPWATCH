@@ -9,6 +9,7 @@ const adminNav = [
   { label: 'Collections', href: '/admin/collections' },
   { label: 'Collage', href: '/admin/collage' },
   { label: 'Invites', href: '/admin/invites' },
+  { label: 'Wishlists', href: '/admin/wishlists' },
   { label: 'Departments', href: '/admin/departments' },
   { label: 'Services', href: '/admin/services' },
   { label: 'Process', href: '/admin/process' },

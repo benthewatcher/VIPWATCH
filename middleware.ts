@@ -17,6 +17,7 @@ const PUBLIC_PATHS = new Set<string>([
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) return true;
   if (pathname.startsWith('/i/')) return true;            // tap-link routes
+  if (pathname.startsWith('/wishlist/')) return true;     // /wishlist/<token> public shares
   if (pathname.startsWith('/admin')) return true;         // admin has its own auth
   if (pathname.startsWith('/api/')) return true;
   if (pathname.startsWith('/_next/')) return true;

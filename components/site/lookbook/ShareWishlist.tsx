@@ -1,25 +1,22 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { Share2, X } from 'lucide-react';
-import { getWishlist } from '@/lib/wishlist/local';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Share2 } from 'lucide-react';
+import { getWishlist, subscribe } from '@/lib/wishlist/local';
 
-const PROFILE_KEY = 'vipwatch:wishlist:profile';
+// Pre-creates / updates the share token in the background so the Share
+// button is always a plain <a> link — no async on click → no popup blocking.
+
+const NAME_KEY = 'vipwatch:wishlist:sharer-name';
 const TOKEN_KEY = 'vipwatch:wishlist:share-token';
+const DEFAULT_TITLE = 'VIP WATCHES';
 
-type Profile = { name?: string; email?: string; title?: string; message?: string };
-
-function readProfile(): Profile {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(PROFILE_KEY);
-    return raw ? (JSON.parse(raw) as Profile) : {};
-  } catch {
-    return {};
-  }
+function readName(): string {
+  if (typeof window === 'undefined') return '';
+  return window.localStorage.getItem(NAME_KEY) ?? '';
 }
-function writeProfile(p: Profile) {
-  window.localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+function writeName(name: string) {
+  window.localStorage.setItem(NAME_KEY, name);
 }
 function readToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -34,227 +31,161 @@ function shareOrigin(): string {
   if (typeof window !== 'undefined') return window.location.origin;
   return 'https://forvip.watch';
 }
-function openWhatsApp(url: string, profile: Profile, count: number) {
+
+function buildWhatsAppHref(token: string, count: number, name: string): string {
+  const url = `${shareOrigin()}/wishlist/${token}`;
   const lines = [
-    profile.title ?? `${count} piece${count === 1 ? '' : 's'} I've been saving`,
-    profile.message ? `\n${profile.message}\n` : '',
-    profile.name ? `From ${profile.name} — have a look:` : 'Have a look:',
+    DEFAULT_TITLE,
+    '',
+    `${count} piece${count === 1 ? '' : 's'} I've been looking at:`,
     url,
+    '',
+    name ? `— ${name}` : '',
   ].filter(Boolean);
-  const text = encodeURIComponent(lines.join('\n'));
-  window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
+  return `https://wa.me/?text=${encodeURIComponent(lines.join('\n'))}`;
 }
 
 export function ShareWishlist() {
-  const [open, setOpen] = useState(false);
-  const [existingToken, setExistingToken] = useState<string | null>(null);
-  const [profile, setProfile] = useState<Profile>({});
-  const [pending, startTransition] = useTransition();
+  const [name, setName] = useState('');
+  const [token, setToken] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const lastSynced = useRef<string>('');
 
-  useEffect(() => {
-    setExistingToken(readToken());
-    setProfile(readProfile());
-  }, []);
-
-  function onClickShare() {
-    const tok = readToken();
-    const prof = readProfile();
-    if (prof.name) {
-      shareNow(tok, prof);
-      return;
-    }
-    setProfile(prof);
-    setExistingToken(tok);
-    setOpen(true);
-    setErr(null);
-  }
-
-  function shareNow(tokenToUse: string | null, prof: Profile) {
+  const sync = useCallback(async (overrideName?: string) => {
     const ids = getWishlist();
-    if (ids.length === 0) {
-      setErr('Add at least one watch to your wishlist first.');
-      setOpen(true);
-      return;
-    }
-    startTransition(async () => {
+    if (ids.length === 0) return;
+    const currentName = overrideName ?? readName();
+    // Skip if nothing new to send (same IDs + same name).
+    const signature = ids.join(',') + '|' + currentName;
+    if (signature === lastSynced.current) return;
+
+    setSyncing(true);
+    setErr(null);
+    try {
       const res = await fetch('/api/wishlist/share', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          token: tokenToUse,
+          token: readToken(),
           commission_ids: ids,
-          title: prof.title ?? null,
-          message: prof.message ?? null,
-          sharer_name: prof.name ?? null,
-          sharer_email: prof.email ?? null,
+          title: DEFAULT_TITLE,
+          sharer_name: currentName || null,
         }),
       });
-      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; token?: string; error?: string };
-      if (!res.ok || !body.token) {
-        setErr(body.error ?? 'Could not create a share link.');
-        setOpen(true);
-        return;
+      const body = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        token?: string;
+        error?: string;
+      };
+      if (res.ok && body.token) {
+        writeToken(body.token);
+        setToken(body.token);
+        lastSynced.current = signature;
+      } else if (body.error) {
+        setErr(body.error);
       }
-      writeToken(body.token);
-      setExistingToken(body.token);
-      const url = `${shareOrigin()}/wishlist/${body.token}`;
-      openWhatsApp(url, prof, ids.length);
-    });
-  }
+    } catch (e) {
+      setErr((e as Error)?.message ?? 'Could not prepare link');
+    } finally {
+      setSyncing(false);
+    }
+  }, []);
 
-  function onSubmitProfile(e: React.FormEvent<HTMLFormElement>) {
+  // Initial load + subscribe to wishlist changes for live token sync.
+  useEffect(() => {
+    setName(readName());
+    setToken(readToken());
+    setCount(getWishlist().length);
+    sync();
+    return subscribe(() => {
+      setCount(getWishlist().length);
+      sync();
+    });
+  }, [sync]);
+
+  function onSubmitName(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setErr(null);
     const fd = new FormData(e.currentTarget);
-    const next: Profile = {
-      name: String(fd.get('sharer_name') ?? '').trim() || undefined,
-      email: String(fd.get('sharer_email') ?? '').trim() || undefined,
-      title: String(fd.get('title') ?? '').trim() || undefined,
-      message: String(fd.get('message') ?? '').trim() || undefined,
-    };
-    if (!next.name) {
-      setErr('Your name is required so the recipient sees who sent it.');
+    const next = String(fd.get('name') ?? '').trim();
+    if (!next) {
+      setErr('Enter your name to continue.');
       return;
     }
-    writeProfile(next);
-    setProfile(next);
-    setOpen(false);
-    shareNow(readToken(), next);
+    writeName(next);
+    setName(next);
+    setErr(null);
+    // Sync straight away so the share link reflects the new name.
+    sync(next);
   }
 
+  if (count === 0) return null;
+
+  // No name yet → show inline prompt.
+  if (!name) {
+    return (
+      <form onSubmit={onSubmitName} className="grid gap-2 sm:flex sm:items-end sm:gap-3">
+        <label className="block flex-1">
+          <span className="text-[11px] uppercase tracking-[0.25em] text-text-muted">
+            Your name
+          </span>
+          <input
+            name="name"
+            type="text"
+            autoComplete="name"
+            required
+            placeholder="To share, we need your name first"
+            className="mt-2 w-full bg-transparent border-b border-divider py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+        <button
+          type="submit"
+          className="inline-flex items-center gap-2 border border-accent px-6 py-2.5 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors whitespace-nowrap"
+        >
+          <Share2 size={14} /> Save & share
+        </button>
+        {err && (
+          <p className="sm:basis-full text-sm text-red-400 sm:mt-2">{err}</p>
+        )}
+      </form>
+    );
+  }
+
+  // Name set, token still being prepared.
+  if (!token) {
+    return (
+      <span className="text-xs uppercase tracking-[0.25em] text-text-muted">
+        {syncing ? 'Preparing share link…' : err || 'Preparing share link…'}
+      </span>
+    );
+  }
+
+  const href = buildWhatsAppHref(token, count, name);
+
   return (
-    <>
+    <div className="flex items-center gap-3">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-2 border border-accent px-8 py-3 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors"
+      >
+        <Share2 size={14} /> Share via WhatsApp
+      </a>
       <button
         type="button"
-        onClick={onClickShare}
-        disabled={pending}
-        className="inline-flex items-center gap-2 border border-accent px-8 py-3 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors disabled:opacity-50"
+        onClick={() => {
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(NAME_KEY);
+            setName('');
+          }
+        }}
+        className="text-[11px] uppercase tracking-[0.25em] text-text-muted hover:text-accent"
+        title="Change the name shown on shares"
       >
-        <Share2 size={14} />
-        {pending ? 'Preparing…' : 'Share via WhatsApp'}
+        Change name
       </button>
-
-      {existingToken && (
-        <button
-          type="button"
-          onClick={() => {
-            setProfile(readProfile());
-            setOpen(true);
-            setErr(null);
-          }}
-          className="ml-3 text-xs uppercase tracking-[0.2em] text-text-muted hover:text-accent"
-        >
-          Edit details
-        </button>
-      )}
-
-      {open && (
-        <div
-          className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-sm flex items-center justify-center px-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="relative w-full max-w-lg bg-bg-primary border border-divider p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={() => setOpen(false)}
-              className="absolute top-3 right-3 text-text-muted hover:text-text-primary"
-            >
-              <X size={18} />
-            </button>
-
-            <h2 className="font-serif text-2xl">Share your list</h2>
-            <p className="text-xs text-text-muted mt-1">
-              Once we have your name, we&apos;ll open WhatsApp with your link
-              ready to send. The recipient can browse the atelier as your guest.
-            </p>
-
-            <form onSubmit={onSubmitProfile} className="mt-6 grid gap-4">
-              <Field
-                name="sharer_name"
-                label="Your name"
-                placeholder="Alice"
-                required
-                defaultValue={profile.name ?? ''}
-              />
-              <Field
-                name="sharer_email"
-                label="Your email (optional, lets the recipient reply)"
-                type="email"
-                defaultValue={profile.email ?? ''}
-              />
-              <Field
-                name="title"
-                label="Title for this list (optional)"
-                placeholder="e.g. Cannes shortlist"
-                defaultValue={profile.title ?? ''}
-              />
-              <Field
-                name="message"
-                label="A short note (optional)"
-                textarea
-                defaultValue={profile.message ?? ''}
-              />
-
-              {err && <p className="text-sm text-red-400">{err}</p>}
-
-              <button
-                type="submit"
-                disabled={pending}
-                className="mt-2 self-start border border-accent px-8 py-3 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors disabled:opacity-50"
-              >
-                {pending ? 'Preparing…' : 'Continue to WhatsApp'}
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
-
-function Field({
-  name,
-  label,
-  type = 'text',
-  placeholder,
-  defaultValue,
-  required,
-  textarea,
-}: {
-  name: string;
-  label: string;
-  type?: string;
-  placeholder?: string;
-  defaultValue?: string;
-  required?: boolean;
-  textarea?: boolean;
-}) {
-  return (
-    <label className="block">
-      <span className="text-[11px] uppercase tracking-[0.25em] text-text-muted">{label}</span>
-      {textarea ? (
-        <textarea
-          name={name}
-          rows={3}
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-          className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
-      ) : (
-        <input
-          name={name}
-          type={type}
-          required={required}
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-          className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
-        />
-      )}
-    </label>
+    </div>
   );
 }

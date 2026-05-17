@@ -42,6 +42,13 @@ export default async function Waitlist({
         )}
 
         <RequestAccessForm />
+
+        <p className="mt-10 text-[11px] uppercase tracking-[0.25em] text-text-muted">
+          Already invited?{' '}
+          <a href="/signin" className="text-accent hover:underline">
+            Sign in with SMS →
+          </a>
+        </p>
       </div>
     </main>
   );

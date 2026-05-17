@@ -13,7 +13,9 @@ export function NewInviteForm() {
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr(null);
-    const fd = new FormData(e.currentTarget);
+    // Capture form before any await — React nulls e.currentTarget on the next tick.
+    const formEl = e.currentTarget;
+    const fd = new FormData(formEl);
     const input = {
       label: String(fd.get('label') ?? '').trim(),
       phone: String(fd.get('phone') ?? '').trim() || null,
@@ -34,7 +36,7 @@ export function NewInviteForm() {
       }
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://forvip.watch';
       setCreated({ token: r.token, label: input.label, url: `${origin}/i/${r.token}` });
-      (e.currentTarget as HTMLFormElement).reset();
+      formEl?.reset();
     });
   }
 

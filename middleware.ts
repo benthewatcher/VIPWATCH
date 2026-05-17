@@ -11,6 +11,7 @@ import { COOKIE_NAME, verifySessionCookie } from '@/lib/auth/invite-session';
 // Paths that stay public even without an invite session.
 const PUBLIC_PATHS = new Set<string>([
   '/waitlist',
+  '/signin',
 ]);
 
 function isPublicPath(pathname: string): boolean {

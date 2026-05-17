@@ -14,17 +14,28 @@ function serviceClient() {
 }
 
 export async function POST(req: Request) {
+  try {
+    return await handle(req);
+  } catch (e) {
+    console.error('[otp:verify] unhandled error:', e);
+    return NextResponse.json({ error: 'Something went wrong. Try again.' }, { status: 500 });
+  }
+}
+
+async function handle(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { phone?: string; code?: string };
   const phone = body.phone ? normalisePhone(body.phone) : '';
-  const code = (body.code ?? '').trim();
+  // Strip ALL non-digit characters from the code — iOS / Android often
+  // auto-fill with whitespace or a leading "VIP WATCH:" label.
+  const code = (body.code ?? '').replace(/\D/g, '').slice(0, 6);
   if (!phone || !/^\d{6}$/.test(code)) {
+    console.warn('[otp:verify] invalid input', { phoneLen: phone.length, codeLen: code.length });
     return NextResponse.json({ error: 'Enter the 6-digit code from your SMS.' }, { status: 400 });
   }
 
   const supabase = serviceClient() as any;
 
-  // Latest unconsumed, non-expired OTP for this phone.
-  const { data: otp } = await supabase
+  const { data: otp, error: otpErr } = await supabase
     .from('phone_otps')
     .select('id, code_hash, invite_id, expires_at, attempts, consumed_at')
     .eq('phone', phone)
@@ -33,7 +44,10 @@ export async function POST(req: Request) {
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
-
+  if (otpErr) {
+    console.error('[otp:verify] otp lookup error:', otpErr.message);
+    return NextResponse.json({ error: 'Could not verify code.' }, { status: 500 });
+  }
   if (!otp) {
     return NextResponse.json({ error: 'Code expired or not found. Request a new one.' }, { status: 400 });
   }
@@ -45,25 +59,27 @@ export async function POST(req: Request) {
   const matches = constantEq(otp.code_hash, expected);
 
   if (!matches) {
-    await supabase
-      .from('phone_otps')
-      .update({ attempts: otp.attempts + 1 })
-      .eq('id', otp.id);
+    await supabase.from('phone_otps').update({ attempts: otp.attempts + 1 }).eq('id', otp.id);
     return NextResponse.json({ error: 'Incorrect code.' }, { status: 400 });
   }
 
-  // Mark consumed.
   await supabase.from('phone_otps').update({ consumed_at: new Date().toISOString() }).eq('id', otp.id);
 
-  // Verify the bound invite is still usable.
   if (!otp.invite_id) {
-    return NextResponse.json({ error: 'This number is no longer associated with an active invite.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'This number is no longer associated with an active invite.' },
+      { status: 400 },
+    );
   }
-  const { data: invite } = await supabase
+  const { data: invite, error: invErr } = await supabase
     .from('invites')
     .select('id, is_revoked, expires_at, max_uses, used_count')
     .eq('id', otp.invite_id)
     .maybeSingle();
+  if (invErr) {
+    console.error('[otp:verify] invite lookup error:', invErr.message);
+    return NextResponse.json({ error: 'Could not verify invite.' }, { status: 500 });
+  }
   if (!invite || invite.is_revoked || new Date(invite.expires_at).getTime() < Date.now()) {
     return NextResponse.json({ error: 'This invite has been revoked or expired.' }, { status: 403 });
   }
@@ -74,14 +90,22 @@ export async function POST(req: Request) {
   // Log the re-use.
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
   const ua = req.headers.get('user-agent') ?? '';
-  await supabase.from('invite_uses').insert({
+  const { error: logErr } = await supabase.from('invite_uses').insert({
     invite_id: invite.id,
     ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
-  await supabase.rpc('increment_invite_used', { _invite_id: invite.id }).catch(async () => {
-    await supabase.from('invites').update({ used_count: invite.used_count + 1 }).eq('id', invite.id);
-  });
+  if (logErr) console.warn('[otp:verify] invite_uses insert failed (non-fatal):', logErr.message);
+
+  // Bump used_count. Try RPC first; fall back to direct update on error.
+  const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });
+  if (rpc.error) {
+    const { error: updErr } = await supabase
+      .from('invites')
+      .update({ used_count: invite.used_count + 1 })
+      .eq('id', invite.id);
+    if (updErr) console.warn('[otp:verify] used_count update failed:', updErr.message);
+  }
 
   const cookie = await createSessionCookie(invite.id);
   const res = NextResponse.json({ ok: true });

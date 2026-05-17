@@ -23,7 +23,6 @@ export function Footer({ locale }: { locale: string }) {
           <h3 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-4">Navigate</h3>
           <ul className="space-y-2 text-sm">
             <li><Link href={localized('/commissions')} className="hover:text-accent">{tNav('commissions')}</Link></li>
-            <li><Link href={localized('/services')} className="hover:text-accent">{tNav('services')}</Link></li>
             <li><Link href={localized('/atelier')} className="hover:text-accent">{tNav('atelier')}</Link></li>
             <li><Link href={localized('/contact')} className="hover:text-accent">{tNav('contact')}</Link></li>
           </ul>

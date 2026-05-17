@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { headers, cookies } from 'next/headers';
+import { redirect, notFound } from 'next/navigation';
 import { createClient as createSb } from '@supabase/supabase-js';
 import { CommissionCardVisual } from '@/components/site/CommissionCardVisual';
 import { pickLocale } from '@/lib/i18n/pick';
 import { publicMediaUrl } from '@/lib/utils/storage';
+import { COOKIE_NAME, verifySessionCookie, createSessionCookie } from '@/lib/auth/invite-session';
+import { createVisitor } from '@/lib/auth/visitor';
+
+// Shared wishlists double as forwardable invites: tapping this URL admits the
+// visitor via the SHARER's invite (consumes one use). When the sharer's
+// invite is dead, we bounce to /waitlist — no read-only teaser.
 
 export const dynamic = 'force-dynamic';
 
@@ -15,12 +22,14 @@ function serviceClient() {
 }
 
 type Shared = {
+  id: string;
   token: string;
   title: string | null;
   message: string | null;
   sharer_name: string | null;
   sharer_email: string | null;
   commission_ids: string[];
+  invite_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -67,13 +76,70 @@ export default async function SharedWishlist({
 
   const { data: shared } = await supabase
     .from('shared_wishlists')
-    .select('token, title, message, sharer_name, sharer_email, commission_ids, created_at, updated_at')
+    .select('id, token, title, message, sharer_name, sharer_email, commission_ids, invite_id, created_at, updated_at')
     .eq('token', token)
     .maybeSingle();
   if (!shared) notFound();
   const s = shared as Shared;
 
-  // Increment view count (best effort, non-blocking).
+  // Does the visitor already have a session?
+  const cookieStore = await cookies();
+  const existing = await verifySessionCookie(cookieStore.get(COOKIE_NAME)?.value);
+
+  if (!existing) {
+    // First-time viewer. Admit via the SHARER's invite, if valid.
+    if (!s.invite_id) redirect('/waitlist?reason=invalid');
+
+    const { data: inviteRow } = await supabase
+      .from('invites')
+      .select('id, is_revoked, expires_at, max_uses, used_count, label')
+      .eq('id', s.invite_id)
+      .maybeSingle();
+    if (!inviteRow) redirect('/waitlist?reason=invalid');
+    const invite = inviteRow as {
+      id: string;
+      is_revoked: boolean;
+      expires_at: string;
+      max_uses: number | null;
+      used_count: number;
+      label: string;
+    };
+    if (invite.is_revoked) redirect('/waitlist?reason=revoked');
+    if (new Date(invite.expires_at).getTime() < Date.now()) redirect('/waitlist?reason=expired');
+    if (typeof invite.max_uses === 'number' && invite.used_count >= invite.max_uses) {
+      redirect('/waitlist?reason=used');
+    }
+
+    const hdrs = await headers();
+    const ip = hdrs.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
+    const ua = hdrs.get('user-agent') ?? '';
+
+    const visitor = await createVisitor({
+      inviteId: invite.id,
+      referredByName: s.sharer_name ?? invite.label,
+      sharedWishlistId: s.id,
+      ip,
+      userAgent: ua,
+    });
+
+    await supabase.from('invite_uses').insert({
+      invite_id: invite.id,
+      ip_hash: null,
+      user_agent: ua.slice(0, 500),
+    });
+    const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });
+    if (rpc.error) {
+      await supabase.from('invites').update({ used_count: invite.used_count + 1 }).eq('id', invite.id);
+    }
+
+    supabase.rpc('increment_shared_wishlist_view', { _token: token }).then(() => {});
+
+    const cookie = await createSessionCookie(invite.id, visitor?.id ?? null);
+    cookieStore.set(cookie);
+    redirect(`/welcome?next=${encodeURIComponent('/wishlist/' + token)}`);
+  }
+
+  // Already signed in — just bump the view counter.
   supabase.rpc('increment_shared_wishlist_view', { _token: token }).then(() => {});
 
   let commissions: Commission[] = [];
@@ -87,9 +153,7 @@ export default async function SharedWishlist({
     commissions = s.commission_ids.map((id) => byId.get(id)).filter((c): c is Commission => Boolean(c));
   }
 
-  const subjectLine = encodeURIComponent(
-    `Re: ${s.title || 'your VIP WATCH selection'}`,
-  );
+  const subjectLine = encodeURIComponent(`Re: ${s.title || 'your VIP WATCH selection'}`);
   const replyBody = encodeURIComponent(
     `Hello ${s.sharer_name ?? ''},\n\nAbout your selection of ${commissions.length} piece${commissions.length === 1 ? '' : 's'}…\n\n`,
   );
@@ -127,11 +191,7 @@ export default async function SharedWishlist({
             {commissions.map((c) => {
               const title = pickLocale(c, 'title', 'en') ?? '';
               return (
-                <Link
-                  key={c.id}
-                  href={`/en/commissions/${c.slug}`}
-                  className="group block"
-                >
+                <Link key={c.id} href={`/en/commissions/${c.slug}`} className="group block">
                   <CommissionCardVisual
                     title={title}
                     image={publicMediaUrl(c.card_image ?? c.hero_image)}

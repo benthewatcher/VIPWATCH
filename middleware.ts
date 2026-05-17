@@ -12,6 +12,7 @@ import { COOKIE_NAME, verifySessionCookie } from '@/lib/auth/invite-session';
 const PUBLIC_PATHS = new Set<string>([
   '/waitlist',
   '/signin',
+  '/welcome',
 ]);
 
 function isPublicPath(pathname: string): boolean {

@@ -11,6 +11,7 @@ export type SessionPayload = {
   iid: string;
   iat: number;
   exp: number;
+  vid?: string; // visitor_id (optional for back-compat with older cookies)
 };
 
 function getSecret(): string {
@@ -74,12 +75,17 @@ function timingSafeEqualHex(a: string, b: string): boolean {
   return mismatch === 0;
 }
 
-export async function createSessionCookie(inviteId: string, ttlDays: number = DAYS) {
+export async function createSessionCookie(
+  inviteId: string,
+  visitorId?: string | null,
+  ttlDays: number = DAYS,
+) {
   const now = Math.floor(Date.now() / 1000);
   const payload: SessionPayload = {
     iid: inviteId,
     iat: now,
     exp: now + ttlDays * 24 * 60 * 60,
+    ...(visitorId ? { vid: visitorId } : {}),
   };
   const body = b64urlFromString(JSON.stringify(payload));
   const sig = await sign(body);

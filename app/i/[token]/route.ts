@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createAnonClient } from '@/lib/supabase/anon';
 import { createSessionCookie, hashIp } from '@/lib/auth/invite-session';
+import { createVisitor } from '@/lib/auth/visitor';
 
 // Tap-the-link sign-in. Invite tokens live in the `invites` table and
 // are validated server-side. Anyone tapping a valid token gets a 60-day
@@ -82,9 +83,18 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
   }
 
-  // Set the cookie and bounce them to the home page.
-  const cookie = await createSessionCookie(inv.id);
-  const res = NextResponse.redirect(new URL('/en', req.url));
+  // Mint a visitor row so we can capture name later and attribute properly.
+  const visitor = await createVisitor({
+    inviteId: inv.id,
+    referredByName: inv.label,
+    ip,
+    userAgent: ua,
+  });
+
+  // Set the cookie and bounce them to /welcome to capture name.
+  const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
+  const dest = visitor?.id ? '/welcome' : '/en';
+  const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { createAnonClient } from '@/lib/supabase/anon';
+import { createAnonClient, createAnonClientOrNull } from '@/lib/supabase/anon';
 import { Hero } from '@/components/site/Hero';
 import { FadeUp } from '@/components/site/FadeUp';
 import { CommissionCard } from '@/components/site/CommissionCard';
@@ -61,7 +61,8 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-  const supabase = (createAnonClient()) as any;
+  const supabase = createAnonClientOrNull() as any;
+  if (!supabase) return [];
   const { data } = await supabase
     .from('commission_collections')
     .select('slug')

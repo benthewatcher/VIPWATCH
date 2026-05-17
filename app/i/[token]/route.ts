@@ -16,6 +16,9 @@ type Invite = {
   max_uses: number | null;
   used_count: number;
   label: string;
+  is_personal: boolean | null;
+  email: string | null;
+  phone: string | null;
 };
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
@@ -40,7 +43,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
 
   const { data: invite, error } = await supabase
     .from('invites')
-    .select('id, is_revoked, expires_at, max_uses, used_count, label')
+    .select('id, is_revoked, expires_at, max_uses, used_count, label, is_personal, email, phone')
     .eq('token', token)
     .maybeSingle();
 
@@ -91,9 +94,26 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     userAgent: ua,
   });
 
-  // Set the cookie and bounce them to /welcome to capture name.
+  // For personal invites, seed the visitor with the recipient's details that
+  // were filled in admin. Result: visitor.name is set → /welcome auto-skips.
+  if (visitor?.id && inv.is_personal) {
+    const { error: seedErr } = await supabase
+      .from('visitors')
+      .update({
+        name: inv.label,
+        email: inv.email,
+        phone: inv.phone,
+      })
+      .eq('id', visitor.id);
+    if (seedErr) {
+      console.warn('[invite] visitor seed failed (non-fatal):', seedErr.message);
+    }
+  }
+
+  // Set the cookie and bounce them.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  const dest = visitor?.id ? '/welcome' : '/en';
+  // Personal invites already have a name → skip /welcome entirely.
+  const dest = inv.is_personal ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

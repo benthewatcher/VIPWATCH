@@ -9,6 +9,7 @@ export function NewInviteForm() {
   const [err, setErr] = useState<string | null>(null);
   const [created, setCreated] = useState<{ token: string; label: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isPersonal, setIsPersonal] = useState(false);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -16,16 +17,23 @@ export function NewInviteForm() {
     // Capture form before any await — React nulls e.currentTarget on the next tick.
     const formEl = e.currentTarget;
     const fd = new FormData(formEl);
+    const isPersonal = fd.get('is_personal') === 'on';
     const input = {
       label: String(fd.get('label') ?? '').trim(),
       phone: String(fd.get('phone') ?? '').trim() || null,
       email: String(fd.get('email') ?? '').trim() || null,
       notes: String(fd.get('notes') ?? '').trim() || null,
-      max_uses: fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
+      // Personal invites are single-use: the link belongs to that one person.
+      max_uses: isPersonal ? 1 : fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
       expires_in_days: fd.get('expires_in_days') ? Number(fd.get('expires_in_days')) : 30,
+      is_personal: isPersonal,
     };
     if (!input.label) {
-      setErr('Label is required.');
+      setErr(isPersonal ? "Recipient's name is required." : 'Label is required.');
+      return;
+    }
+    if (isPersonal && !input.email && !input.phone) {
+      setErr('Personal invites need at least an email or a phone for the recipient.');
       return;
     }
     startTransition(async () => {
@@ -74,10 +82,43 @@ export function NewInviteForm() {
       )}
 
       <form onSubmit={onSubmit} className="mt-6 grid gap-4">
-        <Field name="label" label="Label" placeholder="e.g. Roger Smith" required />
+        <label className="inline-flex items-start gap-3 border border-divider bg-bg-secondary/30 p-4 cursor-pointer">
+          <input
+            type="checkbox"
+            name="is_personal"
+            checked={isPersonal}
+            onChange={(e) => setIsPersonal(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="text-xs uppercase tracking-[0.2em] text-text-primary">
+              Personal invite — pre-fill the recipient
+            </span>
+            <span className="block text-[11px] text-text-muted mt-1">
+              When ticked, the recipient skips the &ldquo;What&apos;s your name?&rdquo; step.
+              Their name, email and phone are read from the fields below. Single-use.
+            </span>
+          </span>
+        </label>
+
+        <Field
+          name="label"
+          label={isPersonal ? "Recipient's name" : 'Label'}
+          placeholder={isPersonal ? 'e.g. Roger Smith' : 'e.g. Roger Smith / Press launch FT'}
+          required
+        />
         <div className="grid md:grid-cols-2 gap-4">
-          <Field name="phone" label="Phone (for SMS re-auth)" placeholder="+44 7521 808964" />
-          <Field name="email" label="Email (admin reference)" type="email" placeholder="rger@example.com" />
+          <Field
+            name="phone"
+            label={isPersonal ? "Recipient's phone" : 'Phone (for SMS re-auth)'}
+            placeholder="+44 7521 808964"
+          />
+          <Field
+            name="email"
+            label={isPersonal ? "Recipient's email" : 'Email (admin reference)'}
+            type="email"
+            placeholder="roger@example.com"
+          />
         </div>
         <Field name="notes" label="Notes" placeholder="Where you met, context, etc." />
         <div className="grid md:grid-cols-2 gap-4">
@@ -85,7 +126,8 @@ export function NewInviteForm() {
             name="max_uses"
             label="Max uses"
             type="number"
-            placeholder="leave blank = unlimited"
+            placeholder={isPersonal ? '1 (locked for personal)' : 'leave blank = unlimited'}
+            defaultValue={isPersonal ? '1' : ''}
           />
           <Field
             name="expires_in_days"

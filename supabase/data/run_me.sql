@@ -166,6 +166,9 @@ drop policy if exists "admin all on visitors" on visitors;
 create policy "admin all on visitors" on visitors for all
   using (is_admin()) with check (is_admin());
 
+alter table visitors add column if not exists phone text;
+alter table invites add column if not exists is_personal boolean not null default false;
+
 create table if not exists visitor_notifications (
   id uuid primary key default gen_random_uuid(),
   visitor_id uuid not null references visitors(id) on delete cascade,

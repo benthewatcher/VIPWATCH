@@ -10,6 +10,7 @@ type Visitor = {
   id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
   invite_id: string | null;
   referred_by_name: string | null;
   shared_wishlist_id: string | null;
@@ -34,7 +35,7 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
 
   const { data: visitor } = await supabase
     .from('visitors')
-    .select('id, name, email, invite_id, referred_by_name, shared_wishlist_id, first_seen_at, last_seen_at')
+    .select('id, name, email, phone, invite_id, referred_by_name, shared_wishlist_id, first_seen_at, last_seen_at')
     .eq('id', id)
     .maybeSingle();
   if (!visitor) notFound();
@@ -71,6 +72,14 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
             <Dd>
               {v.email ? (
                 <a href={`mailto:${v.email}`} className="text-accent hover:underline">{v.email}</a>
+              ) : (
+                <span className="text-text-muted">—</span>
+              )}
+            </Dd>
+            <Dt>Phone</Dt>
+            <Dd>
+              {v.phone ? (
+                <a href={`tel:${v.phone}`} className="text-accent hover:underline">{v.phone}</a>
               ) : (
                 <span className="text-text-muted">—</span>
               )}

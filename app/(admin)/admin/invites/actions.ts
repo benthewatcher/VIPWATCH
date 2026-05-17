@@ -11,6 +11,7 @@ export type CreateInviteInput = {
   notes?: string | null;
   max_uses?: number | null;        // null / undefined = unlimited
   expires_in_days?: number | null; // default 30
+  is_personal?: boolean;           // pre-fill recipient details, skip /welcome
 };
 
 export async function createInvite(input: CreateInviteInput) {
@@ -29,8 +30,9 @@ export async function createInvite(input: CreateInviteInput) {
         phone: input.phone?.trim() || null,
         email: input.email?.trim() || null,
         notes: input.notes?.trim() || null,
-        max_uses: input.max_uses ?? null,
+        max_uses: input.is_personal ? 1 : input.max_uses ?? null,
         expires_at: expiresAt,
+        is_personal: !!input.is_personal,
       })
       .select('id, token')
       .single();

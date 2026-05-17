@@ -9,6 +9,7 @@ type Visitor = {
   id: string;
   name: string | null;
   email: string | null;
+  phone: string | null;
   invite_id: string | null;
   referred_by_name: string | null;
   first_seen_at: string;
@@ -19,7 +20,7 @@ export default async function VisitorsPage() {
   const supabase = (await createClient()) as any;
   const { data } = await supabase
     .from('visitors')
-    .select('id, name, email, invite_id, referred_by_name, first_seen_at, last_seen_at')
+    .select('id, name, email, phone, invite_id, referred_by_name, first_seen_at, last_seen_at')
     .order('last_seen_at', { ascending: false })
     .limit(500);
   const rows = (data ?? []) as Visitor[];
@@ -85,6 +86,9 @@ export default async function VisitorsPage() {
                           </a>
                         ) : (
                           <span className="text-text-muted">—</span>
+                        )}
+                        {r.phone && (
+                          <div className="text-[10px] text-text-muted mt-1">{r.phone}</div>
                         )}
                       </td>
                       <td className="px-4 py-3 text-[11px]">

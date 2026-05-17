@@ -16,6 +16,7 @@ type Row = {
   used_count: number;
   expires_at: string;
   is_revoked: boolean;
+  is_personal: boolean | null;
   created_at: string;
 };
 
@@ -23,7 +24,7 @@ export default async function InvitesPage() {
   const supabase = (await createClient()) as any;
   const { data } = await supabase
     .from('invites')
-    .select('id, token, label, phone, email, max_uses, used_count, expires_at, is_revoked, created_at')
+    .select('id, token, label, phone, email, max_uses, used_count, expires_at, is_revoked, is_personal, created_at')
     .order('created_at', { ascending: false });
   const rows = (data ?? []) as Row[];
 
@@ -82,6 +83,11 @@ export default async function InvitesPage() {
                         <Link href={`/admin/invites/${r.id}`} className="hover:text-accent">
                           {r.label}
                         </Link>
+                        {r.is_personal && (
+                          <span className="ml-2 align-middle inline-block text-[9px] uppercase tracking-[0.25em] px-1.5 py-0.5 border border-accent text-accent">
+                            Personal
+                          </span>
+                        )}
                         {r.email && <div className="text-[10px] text-text-muted">{r.email}</div>}
                       </td>
                       <td className="px-4 py-3 font-mono text-[11px] text-text-muted">

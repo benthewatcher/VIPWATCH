@@ -19,6 +19,7 @@ export type Visitor = {
   shared_wishlist_id: string | null;
   name: string | null;
   email: string | null;
+  phone: string | null;
 };
 
 export async function createVisitor(opts: {
@@ -38,7 +39,7 @@ export async function createVisitor(opts: {
       ip_hash: opts.ip ? await hashIp(opts.ip) : null,
       user_agent: (opts.userAgent ?? '').slice(0, 500),
     })
-    .select('id, invite_id, referred_by_name, shared_wishlist_id, name, email')
+    .select('id, invite_id, referred_by_name, shared_wishlist_id, name, email, phone')
     .single();
   if (error || !data) {
     console.warn('[visitor] insert failed:', error?.message);
@@ -52,7 +53,7 @@ export async function getVisitor(id: string): Promise<Visitor | null> {
   const sb = serviceClient() as any;
   const { data } = await sb
     .from('visitors')
-    .select('id, invite_id, referred_by_name, shared_wishlist_id, name, email')
+    .select('id, invite_id, referred_by_name, shared_wishlist_id, name, email, phone')
     .eq('id', id)
     .maybeSingle();
   return (data as Visitor | null) ?? null;
@@ -60,17 +61,16 @@ export async function getVisitor(id: string): Promise<Visitor | null> {
 
 export async function updateVisitorName(
   id: string,
-  fields: { name?: string | null; email?: string | null },
+  fields: { name?: string | null; email?: string | null; phone?: string | null },
 ): Promise<void> {
   const sb = serviceClient() as any;
-  await sb
-    .from('visitors')
-    .update({
-      name: fields.name ?? null,
-      email: fields.email ?? null,
-      last_seen_at: new Date().toISOString(),
-    })
-    .eq('id', id);
+  const patch: Record<string, unknown> = {
+    last_seen_at: new Date().toISOString(),
+  };
+  if (fields.name !== undefined) patch.name = fields.name ?? null;
+  if (fields.email !== undefined) patch.email = fields.email ?? null;
+  if (fields.phone !== undefined) patch.phone = fields.phone ?? null;
+  await sb.from('visitors').update(patch).eq('id', id);
 }
 
 export async function touchVisitor(id: string): Promise<void> {

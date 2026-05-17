@@ -60,7 +60,12 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // Expose the current pathname to Server Components (layouts can't read it
+  // natively). Used by the locale layout to hide the global CTA on pages
+  // that already have their own.
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set('x-pathname', pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 async function refreshSupabaseSession(req: NextRequest) {

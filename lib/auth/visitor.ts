@@ -28,6 +28,9 @@ export async function createVisitor(opts: {
   sharedWishlistId?: string | null;
   ip?: string;
   userAgent?: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
 }): Promise<Visitor | null> {
   const sb = serviceClient() as any;
   const { data, error } = await sb
@@ -38,6 +41,9 @@ export async function createVisitor(opts: {
       shared_wishlist_id: opts.sharedWishlistId ?? null,
       ip_hash: opts.ip ? await hashIp(opts.ip) : null,
       user_agent: (opts.userAgent ?? '').slice(0, 500),
+      name: opts.name ?? null,
+      email: opts.email ?? null,
+      phone: opts.phone ?? null,
     })
     .select('id, invite_id, referred_by_name, shared_wishlist_id, name, email, phone')
     .single();

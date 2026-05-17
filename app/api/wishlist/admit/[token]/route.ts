@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient as createSb } from '@supabase/supabase-js';
-import { createSessionCookie } from '@/lib/auth/invite-session';
+import { createSessionCookie, hashIp } from '@/lib/auth/invite-session';
 import { createVisitor } from '@/lib/auth/visitor';
 
 // Admit a wishlist recipient through the SHARER's invite. This is a Route
@@ -65,7 +65,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
   // Log + bump used_count.
   await supabase.from('invite_uses').insert({
     invite_id: invite.id,
-    ip_hash: null,
+    ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
   const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });

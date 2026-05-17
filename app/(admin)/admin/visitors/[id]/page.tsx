@@ -24,7 +24,9 @@ type Note = {
   body: string;
   sent_email: boolean;
   sent_banner: boolean;
+  sent_sms: boolean;
   email_sent_at: string | null;
+  sms_sent_at: string | null;
   read_at: string | null;
   created_at: string;
 };
@@ -43,8 +45,9 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
 
   const { data: notesData } = await supabase
     .from('visitor_notifications')
-    .select('id, subject, body, sent_email, sent_banner, email_sent_at, read_at, created_at')
+    .select('id, subject, body, sent_email, sent_banner, sent_sms, email_sent_at, sms_sent_at, read_at, created_at')
     .eq('visitor_id', id)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false });
   const notes = (notesData ?? []) as Note[];
 
@@ -103,7 +106,7 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
           </dl>
         </section>
 
-        <VisitorCompose visitorId={v.id} hasEmail={!!v.email} />
+        <VisitorCompose visitorId={v.id} hasEmail={!!v.email} hasPhone={!!v.phone} />
 
         <section>
           <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
@@ -120,6 +123,9 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
                     <span className="flex gap-3">
                       {n.sent_email && (
                         <span className="text-accent">Email sent</span>
+                      )}
+                      {n.sent_sms && (
+                        <span className="text-accent">SMS sent</span>
                       )}
                       {n.sent_banner && (
                         <span className={n.read_at ? 'text-text-muted' : 'text-accent'}>

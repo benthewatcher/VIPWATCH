@@ -87,28 +87,17 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
   }
 
   // Mint a visitor row so we can capture name later and attribute properly.
+  // Personal invites seed name/email/phone in the same insert so /welcome
+  // auto-skips and we don't risk a silent post-insert seed failure.
   const visitor = await createVisitor({
     inviteId: inv.id,
     referredByName: inv.label,
     ip,
     userAgent: ua,
+    name: inv.is_personal ? inv.label : null,
+    email: inv.is_personal ? inv.email : null,
+    phone: inv.is_personal ? inv.phone : null,
   });
-
-  // For personal invites, seed the visitor with the recipient's details that
-  // were filled in admin. Result: visitor.name is set → /welcome auto-skips.
-  if (visitor?.id && inv.is_personal) {
-    const { error: seedErr } = await supabase
-      .from('visitors')
-      .update({
-        name: inv.label,
-        email: inv.email,
-        phone: inv.phone,
-      })
-      .eq('id', visitor.id);
-    if (seedErr) {
-      console.warn('[invite] visitor seed failed (non-fatal):', seedErr.message);
-    }
-  }
 
   // Set the cookie and bounce them.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);

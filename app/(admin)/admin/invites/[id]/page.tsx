@@ -27,6 +27,15 @@ type Use = {
   user_agent: string | null;
 };
 
+type Enquiry = {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  status: string;
+  created_at: string;
+};
+
 export default async function InviteDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = (await createClient()) as any;
@@ -38,13 +47,25 @@ export default async function InviteDetail({ params }: { params: Promise<{ id: s
   if (!invite) notFound();
   const inv = invite as Invite;
 
-  const { data: usesData } = await supabase
-    .from('invite_uses')
-    .select('id, used_at, ip_hash, user_agent')
-    .eq('invite_id', id)
-    .order('used_at', { ascending: false })
-    .limit(200);
+  const [{ data: usesData }, { data: enqData }] = await Promise.all([
+    supabase
+      .from('invite_uses')
+      .select('id, used_at, ip_hash, user_agent')
+      .eq('invite_id', id)
+      .order('used_at', { ascending: false })
+      .limit(200),
+    supabase
+      .from('enquiries')
+      .select('id, name, email, message, status, created_at')
+      .eq('invite_id', id)
+      .order('created_at', { ascending: false })
+      .limit(200),
+  ]);
   const uses = (usesData ?? []) as Use[];
+  const enquiries = (enqData ?? []) as Enquiry[];
+
+  const uniqueDevices = new Set(uses.map((u) => u.ip_hash).filter(Boolean)).size;
+  const lastUsedAt = uses[0]?.used_at ?? null;
 
   return (
     <>
@@ -58,6 +79,16 @@ export default async function InviteDetail({ params }: { params: Promise<{ id: s
           token={inv.token}
           isRevoked={inv.is_revoked}
         />
+
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl">
+          <Stat label="Total taps" value={inv.used_count} />
+          <Stat label="Unique devices" value={uniqueDevices} />
+          <Stat label="Enquiries" value={enquiries.length} />
+          <Stat
+            label="Last tapped"
+            value={lastUsedAt ? new Date(lastUsedAt).toLocaleDateString() : '—'}
+          />
+        </section>
 
         <section className="border border-divider p-6 max-w-3xl">
           <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted">Details</h2>
@@ -79,7 +110,49 @@ export default async function InviteDetail({ params }: { params: Promise<{ id: s
 
         <section>
           <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
-            Usage log ({uses.length})
+            Attributed enquiries ({enquiries.length})
+          </h2>
+          {enquiries.length === 0 ? (
+            <p className="text-text-muted text-sm">No enquiries from this invite yet.</p>
+          ) : (
+            <div className="border border-divider overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-bg-secondary text-text-muted text-[11px] uppercase tracking-[0.2em]">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Received</th>
+                    <th className="px-4 py-3 text-left">Name</th>
+                    <th className="px-4 py-3 text-left">Email</th>
+                    <th className="px-4 py-3 text-left">Message</th>
+                    <th className="px-4 py-3 text-left">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {enquiries.map((e) => (
+                    <tr key={e.id} className="border-t border-divider align-top">
+                      <td className="px-4 py-3 text-text-muted whitespace-nowrap">
+                        {new Date(e.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">{e.name}</td>
+                      <td className="px-4 py-3">
+                        <a href={`mailto:${e.email}`} className="text-accent hover:underline">{e.email}</a>
+                      </td>
+                      <td className="px-4 py-3 max-w-md whitespace-pre-line text-text-muted">
+                        {e.message.length > 160 ? e.message.slice(0, 160) + '…' : e.message}
+                      </td>
+                      <td className="px-4 py-3 text-[10px] uppercase tracking-[0.2em] text-text-muted">
+                        {e.status}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
+            Tap log ({uses.length})
           </h2>
           {uses.length === 0 ? (
             <p className="text-text-muted text-sm">This invite hasn't been used yet.</p>
@@ -124,4 +197,13 @@ function Dt({ children }: { children: React.ReactNode }) {
 }
 function Dd({ children, className }: { children: React.ReactNode; className?: string }) {
   return <dd className={className}>{children}</dd>;
+}
+
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="border border-divider p-4">
+      <p className="text-[10px] uppercase tracking-[0.3em] text-text-muted">{label}</p>
+      <p className="font-serif text-3xl mt-2 leading-none">{value}</p>
+    </div>
+  );
 }

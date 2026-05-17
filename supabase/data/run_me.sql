@@ -107,6 +107,11 @@ drop policy if exists "admin all on phone_otps" on phone_otps;
 create policy "admin all on phone_otps" on phone_otps for all
   using (is_admin()) with check (is_admin());
 
+alter table enquiries
+  add column if not exists invite_id uuid references invites(id) on delete set null;
+
+create index if not exists enquiries_invite_idx on enquiries(invite_id);
+
 -- ---------------------------------------------------------------------------
 -- 2. Process steps — replace with the canonical 6 steps
 -- ---------------------------------------------------------------------------

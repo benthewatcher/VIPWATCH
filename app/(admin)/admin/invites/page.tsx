@@ -27,6 +27,19 @@ export default async function InvitesPage() {
     .order('created_at', { ascending: false });
   const rows = (data ?? []) as Row[];
 
+  // Conversion counts per invite — enquiries stamped with invite_id.
+  const enquiryCounts = new Map<string, number>();
+  if (rows.length > 0) {
+    const { data: enq } = await supabase
+      .from('enquiries')
+      .select('invite_id')
+      .in('invite_id', rows.map((r) => r.id))
+      .not('invite_id', 'is', null);
+    for (const e of ((enq ?? []) as Array<{ invite_id: string }>)) {
+      enquiryCounts.set(e.invite_id, (enquiryCounts.get(e.invite_id) ?? 0) + 1);
+    }
+  }
+
   const now = Date.now();
 
   return (
@@ -45,7 +58,8 @@ export default async function InvitesPage() {
                   <th className="px-4 py-3 text-left">Label</th>
                   <th className="px-4 py-3 text-left">Link</th>
                   <th className="px-4 py-3 text-left">Phone</th>
-                  <th className="px-4 py-3 text-left">Uses</th>
+                  <th className="px-4 py-3 text-left">Taps</th>
+                  <th className="px-4 py-3 text-left">Enquiries</th>
                   <th className="px-4 py-3 text-left">Expires</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3" />
@@ -78,6 +92,16 @@ export default async function InvitesPage() {
                         {r.used_count}
                         {' / '}
                         {r.max_uses ?? '∞'}
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const n = enquiryCounts.get(r.id) ?? 0;
+                          return (
+                            <span className={n > 0 ? 'text-accent font-medium' : 'text-text-muted'}>
+                              {n}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                         {new Date(r.expires_at).toLocaleDateString()}

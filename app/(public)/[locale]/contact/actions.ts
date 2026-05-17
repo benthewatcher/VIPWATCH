@@ -1,7 +1,9 @@
 'use server';
 
+import { cookies } from 'next/headers';
 import { Resend } from 'resend';
 import { createClient } from '@/lib/supabase/server';
+import { COOKIE_NAME, verifySessionCookie } from '@/lib/auth/invite-session';
 
 export type EnquiryInput = {
   name: string;
@@ -30,6 +32,16 @@ export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResult>
     return { ok: false, error: 'That email address looks invalid.' };
   }
 
+  // 0. If the visitor arrived via an invite, attribute the enquiry to it.
+  let inviteId: string | null = null;
+  try {
+    const cookieStore = await cookies();
+    const session = await verifySessionCookie(cookieStore.get(COOKIE_NAME)?.value);
+    if (session?.iid) inviteId = session.iid;
+  } catch {
+    /* cookie helpers can throw in edge cases — never block the enquiry */
+  }
+
   // 1. Persist to Supabase regardless of email outcome.
   try {
     const supabase = (await createClient()) as any;
@@ -46,6 +58,7 @@ export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResult>
       source_path: input.source_path ?? null,
       source_referrer: input.source_referrer ?? null,
       status: 'new',
+      invite_id: inviteId,
     });
     if (error) {
       console.error('[enquiry] DB insert failed:', error.message);

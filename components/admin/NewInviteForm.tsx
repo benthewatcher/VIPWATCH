@@ -34,7 +34,7 @@ export function NewInviteForm() {
         setErr(r.error);
         return;
       }
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://forvip.watch';
+      const origin = inviteOrigin();
       setCreated({ token: r.token, label: input.label, url: `${origin}/i/${r.token}` });
       formEl?.reset();
     });
@@ -110,6 +110,14 @@ export function NewInviteForm() {
       </form>
     </section>
   );
+}
+
+function inviteOrigin(): string {
+  // Prefer NEXT_PUBLIC_SITE_URL so links work even when admin is on localhost.
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
+  if (env) return env;
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://forvip.watch';
 }
 
 function Field({

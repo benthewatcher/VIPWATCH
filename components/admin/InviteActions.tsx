@@ -5,6 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Copy, Check, ShieldOff, ShieldCheck, Trash } from 'lucide-react';
 import { revokeInvite, unrevokeInvite, deleteInvite } from '@/app/(admin)/admin/invites/actions';
 
+function inviteOrigin(): string {
+  const env = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '');
+  if (env) return env;
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://forvip.watch';
+}
+
 export function InviteActions({
   id,
   token,
@@ -18,9 +25,7 @@ export function InviteActions({
   const [copied, setCopied] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const url = typeof window !== 'undefined'
-    ? `${window.location.origin}/i/${token}`
-    : `https://forvip.watch/i/${token}`;
+  const url = `${inviteOrigin()}/i/${token}`;
 
   function copy() {
     navigator.clipboard.writeText(url);

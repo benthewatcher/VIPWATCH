@@ -10,6 +10,7 @@ const adminNav = [
   { label: 'Collage', href: '/admin/collage' },
   { label: 'Invites', href: '/admin/invites' },
   { label: 'Wishlists', href: '/admin/wishlists' },
+  { label: 'Visitors', href: '/admin/visitors' },
   { label: 'Departments', href: '/admin/departments' },
   { label: 'Services', href: '/admin/services' },
   { label: 'Process', href: '/admin/process' },

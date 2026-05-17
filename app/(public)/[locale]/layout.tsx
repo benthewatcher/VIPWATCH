@@ -4,6 +4,7 @@ import { Nav } from '@/components/site/Nav';
 import { Footer } from '@/components/site/Footer';
 import { WhatsAppButton } from '@/components/site/WhatsAppButton';
 import { BeginCommissionCTA } from '@/components/site/BeginCommissionCTA';
+import { VisitorBanner } from '@/components/site/VisitorBanner';
 
 export function generateStaticParams() {
   return locales.map((locale) => ({ locale }));
@@ -27,6 +28,7 @@ export default async function LocaleLayout({
       <BeginCommissionCTA locale={typed} />
       <Footer locale={typed} />
       <WhatsAppButton locale={typed} />
+      <VisitorBanner />
     </div>
   );
 }

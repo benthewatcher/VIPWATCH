@@ -16,6 +16,10 @@ export function WelcomeForm({ next }: { next: string }) {
       setErr('Enter your name to continue.');
       return;
     }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErr('A valid email is required so the atelier can reach you.');
+      return;
+    }
     startTransition(async () => {
       const res = await fetch('/api/visitor/name', {
         method: 'POST',
@@ -45,13 +49,12 @@ export function WelcomeForm({ next }: { next: string }) {
         />
       </label>
       <label className="block">
-        <span className="text-[11px] uppercase tracking-[0.25em] text-text-muted">
-          Email (optional)
-        </span>
+        <span className="text-[11px] uppercase tracking-[0.25em] text-text-muted">Email</span>
         <input
           name="email"
           type="email"
           autoComplete="email"
+          required
           className="mt-2 w-full bg-transparent border-b border-divider py-3 focus:border-accent focus:outline-none"
         />
       </label>

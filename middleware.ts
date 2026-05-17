@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { COOKIE_NAME, verifySessionCookie } from '@/lib/auth/invite-session';
 
 // Public site is invite-only. We gate /en/* (and /ar/* before redirect) on a
@@ -41,6 +42,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Refresh the Supabase auth session on admin routes so Server Components
+  // see an unexpired token. Without this, the access token expires after an
+  // hour and the admin layout falls back to "no chrome".
+  if (pathname.startsWith('/admin')) {
+    return await refreshSupabaseSession(req);
+  }
+
   // Invite gate.
   if (!isPublicPath(pathname)) {
     const session = await verifySessionCookie(req.cookies.get(COOKIE_NAME)?.value);
@@ -53,6 +61,33 @@ export async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
+}
+
+async function refreshSupabaseSession(req: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return NextResponse.next();
+
+  let res = NextResponse.next({ request: req });
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+        res = NextResponse.next({ request: req });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          res.cookies.set(name, value, options),
+        );
+      },
+    },
+  });
+
+  // This call refreshes the access token if it's near expiry and writes the
+  // new cookies to `res` via the setAll callback above.
+  await supabase.auth.getUser();
+  return res;
 }
 
 export const config = {

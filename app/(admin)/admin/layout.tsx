@@ -36,20 +36,7 @@ const hiddenPublicLinks = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  // Diagnostic: surface why chrome isn't rendering. Shows up in Vercel logs.
-  const { cookies } = await import('next/headers');
-  const cookieStore = await cookies();
-  const sbCookies = cookieStore
-    .getAll()
-    .filter((c) => c.name.startsWith('sb-'))
-    .map((c) => c.name);
-  console.log(
-    '[admin:layout] user=', user?.email ?? 'null',
-    'err=', error?.message ?? 'none',
-    'sb-cookies=', sbCookies,
-  );
+  const { data: { user } } = await supabase.auth.getUser();
 
   // /admin/login and /admin/auth/* render without chrome (no user yet).
   if (!user) return <>{children}</>;

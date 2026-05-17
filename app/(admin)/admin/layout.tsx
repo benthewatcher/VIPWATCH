@@ -36,10 +36,22 @@ const hiddenPublicLinks = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  // The proxy gates protected admin routes. /admin/login and /admin/auth/* render
-  // without chrome (no user yet); render children only.
+  // Diagnostic: surface why chrome isn't rendering. Shows up in Vercel logs.
+  const { cookies } = await import('next/headers');
+  const cookieStore = await cookies();
+  const sbCookies = cookieStore
+    .getAll()
+    .filter((c) => c.name.startsWith('sb-'))
+    .map((c) => c.name);
+  console.log(
+    '[admin:layout] user=', user?.email ?? 'null',
+    'err=', error?.message ?? 'none',
+    'sb-cookies=', sbCookies,
+  );
+
+  // /admin/login and /admin/auth/* render without chrome (no user yet).
   if (!user) return <>{children}</>;
 
   return (

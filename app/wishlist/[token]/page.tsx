@@ -1,13 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { headers, cookies } from 'next/headers';
+import { cookies } from 'next/headers';
 import { redirect, notFound } from 'next/navigation';
 import { createClient as createSb } from '@supabase/supabase-js';
 import { CommissionCardVisual } from '@/components/site/CommissionCardVisual';
 import { pickLocale } from '@/lib/i18n/pick';
 import { publicMediaUrl } from '@/lib/utils/storage';
-import { COOKIE_NAME, verifySessionCookie, createSessionCookie } from '@/lib/auth/invite-session';
-import { createVisitor } from '@/lib/auth/visitor';
+import { COOKIE_NAME, verifySessionCookie } from '@/lib/auth/invite-session';
 
 // Shared wishlists double as forwardable invites: tapping this URL admits the
 // visitor via the SHARER's invite (consumes one use). When the sharer's
@@ -87,56 +86,11 @@ export default async function SharedWishlist({
   const existing = await verifySessionCookie(cookieStore.get(COOKIE_NAME)?.value);
 
   if (!existing) {
-    // First-time viewer. Admit via the SHARER's invite, if valid.
-    if (!s.invite_id) redirect('/waitlist?reason=invalid');
-
-    const { data: inviteRow } = await supabase
-      .from('invites')
-      .select('id, is_revoked, expires_at, max_uses, used_count, label')
-      .eq('id', s.invite_id)
-      .maybeSingle();
-    if (!inviteRow) redirect('/waitlist?reason=invalid');
-    const invite = inviteRow as {
-      id: string;
-      is_revoked: boolean;
-      expires_at: string;
-      max_uses: number | null;
-      used_count: number;
-      label: string;
-    };
-    if (invite.is_revoked) redirect('/waitlist?reason=revoked');
-    if (new Date(invite.expires_at).getTime() < Date.now()) redirect('/waitlist?reason=expired');
-    if (typeof invite.max_uses === 'number' && invite.used_count >= invite.max_uses) {
-      redirect('/waitlist?reason=used');
-    }
-
-    const hdrs = await headers();
-    const ip = hdrs.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
-    const ua = hdrs.get('user-agent') ?? '';
-
-    const visitor = await createVisitor({
-      inviteId: invite.id,
-      referredByName: s.sharer_name ?? invite.label,
-      sharedWishlistId: s.id,
-      ip,
-      userAgent: ua,
-    });
-
-    await supabase.from('invite_uses').insert({
-      invite_id: invite.id,
-      ip_hash: null,
-      user_agent: ua.slice(0, 500),
-    });
-    const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });
-    if (rpc.error) {
-      await supabase.from('invites').update({ used_count: invite.used_count + 1 }).eq('id', invite.id);
-    }
-
-    supabase.rpc('increment_shared_wishlist_view', { _token: token }).then(() => {});
-
-    const cookie = await createSessionCookie(invite.id, visitor?.id ?? null);
-    cookieStore.set(cookie);
-    redirect(`/welcome?next=${encodeURIComponent('/wishlist/' + token)}`);
+    // No session yet — hand off to the admit route, which can actually set
+    // cookies (Server Components in Next 15 cannot). The handler validates
+    // the sharer's invite, sets the session cookie, and bounces the visitor
+    // through /welcome (for name capture) back to this URL.
+    redirect(`/api/wishlist/admit/${token}`);
   }
 
   // Already signed in — just bump the view counter.

@@ -155,18 +155,9 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
   // Skip /welcome only when we just pre-filled the named recipient's
   // identity (first human tap of a personal invite). Anyone else — a forward
   // recipient, or the original recipient on a new device — sees /welcome so
-  // we capture their own name. After /welcome we honour the invite's
-  // dest_path (if set) via ?next=.
+  // we capture their own name.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  const customDest = safeDestPath(inv.dest_path);
-  const homeDest = customDest ?? '/en';
-  const dest = isFirstPersonalTap
-    ? homeDest
-    : visitor?.id
-      ? customDest
-        ? `/welcome?next=${encodeURIComponent(customDest)}`
-        : '/welcome'
-      : homeDest;
+  const dest = isFirstPersonalTap ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

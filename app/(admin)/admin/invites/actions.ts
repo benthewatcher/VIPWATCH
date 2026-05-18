@@ -42,6 +42,8 @@ export async function createInvite(input: CreateInviteInput) {
         phone: input.phone?.trim() || null,
         email: input.email?.trim() || null,
         notes: input.notes?.trim() || null,
+        // Personal invites are for known recipients we want to revisit freely —
+        // keep them unlimited unless the admin explicitly capped max_uses.
         max_uses: input.max_uses ?? null,
         expires_at: expiresAt,
         is_personal: !!input.is_personal,

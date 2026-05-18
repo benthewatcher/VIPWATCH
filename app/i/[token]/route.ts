@@ -69,12 +69,19 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
   // Log the use (best-effort, don't fail the sign-in if logging fails).
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
   const ua = req.headers.get('user-agent') ?? '';
-  const { error: logErr } = await supabase.from('invite_uses').insert({
-    invite_id: inv.id,
-    ip_hash: ip ? await hashIp(ip) : null,
-    user_agent: ua.slice(0, 500),
-  });
+  // visitor_id is filled in after createVisitor below.
+  let inviteUseId: string | null = null;
+  const { data: useRow, error: logErr } = await supabase
+    .from('invite_uses')
+    .insert({
+      invite_id: inv.id,
+      ip_hash: ip ? await hashIp(ip) : null,
+      user_agent: ua.slice(0, 500),
+    })
+    .select('id')
+    .single();
   if (logErr) console.warn('[invite] invite_uses insert failed (non-fatal):', logErr.message);
+  else inviteUseId = (useRow as { id: string } | null)?.id ?? null;
 
   // Bump used_count. Try RPC first; if it doesn't exist, fall back to plain update.
   const rpc = await supabase.rpc('increment_invite_used', { _invite_id: inv.id });
@@ -98,6 +105,19 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     email: inv.is_personal ? inv.email : null,
     phone: inv.is_personal ? inv.phone : null,
   });
+
+  // Backfill visitor_id on the invite_use row + log a journey event.
+  if (visitor?.id) {
+    if (inviteUseId) {
+      await supabase.from('invite_uses').update({ visitor_id: visitor.id }).eq('id', inviteUseId);
+    }
+    await supabase.from('visitor_events').insert({
+      visitor_id: visitor.id,
+      event_type: 'share_tap',
+      path: `/i/${token}`,
+      metadata: { invite_id: inv.id, is_personal: !!inv.is_personal },
+    });
+  }
 
   // Set the cookie and bounce them.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);

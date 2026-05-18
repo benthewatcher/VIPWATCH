@@ -29,6 +29,28 @@ type Note = {
   sms_sent_at: string | null;
   read_at: string | null;
   created_at: string;
+  email_delivered_at: string | null;
+  email_opened_at: string | null;
+  email_clicked_at: string | null;
+  email_bounced_at: string | null;
+  sms_status: string | null;
+  sms_delivered_at: string | null;
+  sms_failed_reason: string | null;
+};
+
+type Event = {
+  id: string;
+  event_type: string;
+  path: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+type WishlistRow = {
+  commission_id: string;
+  added_at: string;
+  removed_at: string | null;
+  commissions: { slug: string; title_en: string | null } | null;
 };
 
 export default async function VisitorDetail({ params }: { params: Promise<{ id: string }> }) {
@@ -45,11 +67,27 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
 
   const { data: notesData } = await supabase
     .from('visitor_notifications')
-    .select('id, subject, body, sent_email, sent_banner, sent_sms, email_sent_at, sms_sent_at, read_at, created_at')
+    .select('id, subject, body, sent_email, sent_banner, sent_sms, email_sent_at, sms_sent_at, read_at, created_at, email_delivered_at, email_opened_at, email_clicked_at, email_bounced_at, sms_status, sms_delivered_at, sms_failed_reason')
     .eq('visitor_id', id)
     .is('deleted_at', null)
     .order('created_at', { ascending: false });
   const notes = (notesData ?? []) as Note[];
+
+  const { data: eventsData } = await supabase
+    .from('visitor_events')
+    .select('id, event_type, path, metadata, created_at')
+    .eq('visitor_id', id)
+    .order('created_at', { ascending: false })
+    .limit(200);
+  const events = (eventsData ?? []) as Event[];
+
+  const { data: wishlistData } = await supabase
+    .from('wishlist_items')
+    .select('commission_id, added_at, removed_at, commissions ( slug, title_en )')
+    .eq('visitor_id', id)
+    .order('added_at', { ascending: false });
+  const wishlist = (wishlistData ?? []) as unknown as WishlistRow[];
+  const activeWishlist = wishlist.filter((w) => !w.removed_at);
 
   let inviteLabel: string | null = null;
   if (v.invite_id) {
@@ -110,6 +148,59 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
 
         <section>
           <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
+            Wishlist ({activeWishlist.length})
+          </h2>
+          {activeWishlist.length === 0 ? (
+            <p className="text-text-muted text-sm">Nothing hearted yet.</p>
+          ) : (
+            <ul className="grid gap-2 text-sm">
+              {activeWishlist.map((w) => (
+                <li key={w.commission_id} className="border border-divider px-4 py-2 flex justify-between items-baseline gap-4">
+                  <Link
+                    href={`/admin/commissions/${w.commission_id}`}
+                    className="text-accent hover:underline"
+                  >
+                    {w.commissions?.title_en ?? w.commission_id}
+                  </Link>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted">
+                    {new Date(w.added_at).toLocaleDateString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
+            Journey ({events.length})
+          </h2>
+          {events.length === 0 ? (
+            <p className="text-text-muted text-sm">No events yet.</p>
+          ) : (
+            <ol className="grid gap-2 text-sm font-mono">
+              {events.map((e) => (
+                <li key={e.id} className="border-l-2 border-divider pl-4 py-1">
+                  <div className="flex flex-wrap gap-4 items-baseline">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-text-muted whitespace-nowrap">
+                      {new Date(e.created_at).toLocaleString()}
+                    </span>
+                    <span className="text-accent">{e.event_type}</span>
+                    {e.path && <span className="text-text-muted truncate">{e.path}</span>}
+                  </div>
+                  {e.metadata && Object.keys(e.metadata).length > 0 && (
+                    <pre className="mt-1 text-[10px] text-text-muted/70 whitespace-pre-wrap break-all">
+                      {JSON.stringify(e.metadata)}
+                    </pre>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+
+        <section>
+          <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted mb-3">
             Messages sent ({notes.length})
           </h2>
           {notes.length === 0 ? (
@@ -122,10 +213,23 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
                     <span>{new Date(n.created_at).toLocaleString()}</span>
                     <span className="flex gap-3">
                       {n.sent_email && (
-                        <span className="text-accent">Email sent</span>
+                        <span className={n.email_bounced_at ? 'text-red-400' : n.email_opened_at ? 'text-accent' : 'text-text-muted'}>
+                          Email{' '}
+                          {n.email_bounced_at
+                            ? 'bounced'
+                            : n.email_clicked_at
+                              ? 'clicked'
+                              : n.email_opened_at
+                                ? 'opened'
+                                : n.email_delivered_at
+                                  ? 'delivered'
+                                  : 'sent'}
+                        </span>
                       )}
                       {n.sent_sms && (
-                        <span className="text-accent">SMS sent</span>
+                        <span className={n.sms_failed_reason ? 'text-red-400' : n.sms_delivered_at ? 'text-accent' : 'text-text-muted'}>
+                          SMS {n.sms_failed_reason ? `failed (${n.sms_failed_reason})` : (n.sms_status ?? 'sent')}
+                        </span>
                       )}
                       {n.sent_banner && (
                         <span className={n.read_at ? 'text-text-muted' : 'text-accent'}>

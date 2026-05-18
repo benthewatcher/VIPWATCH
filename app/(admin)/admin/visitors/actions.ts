@@ -39,6 +39,7 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
   const createdBy = auth?.user?.id ?? null;
 
   let sent_email = false;
+  let email_message_id: string | null = null;
   let emailError: string | null = null;
 
   if (input.channels.email) {
@@ -51,7 +52,7 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
       } else {
         try {
           const resend = new Resend(apiKey);
-          await resend.emails.send({
+          const res = await resend.emails.send({
             from: FROM,
             to: [v.email],
             replyTo: 'bespoke@forvip.watch',
@@ -59,6 +60,7 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
             text: `Hello ${v.name ?? ''},\n\n${body}\n\n— VIP WATCH`,
           });
           sent_email = true;
+          email_message_id = (res.data as { id?: string } | null)?.id ?? null;
         } catch (e) {
           console.error('[visitor:notify] resend failed:', e);
           emailError = 'Email delivery failed.';
@@ -68,6 +70,7 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
   }
 
   let sent_sms = false;
+  let sms_message_id: string | null = null;
   let smsError: string | null = null;
   if (input.channels.sms) {
     if (!v.phone) {
@@ -77,8 +80,10 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
         ? `${input.subject.trim()} — ${body}`
         : body;
       const result = await sendSms(v.phone, smsBody);
-      if (result.ok) sent_sms = true;
-      else {
+      if (result.ok) {
+        sent_sms = true;
+        sms_message_id = result.messageSid ?? null;
+      } else {
         console.error('[visitor:notify] sms failed:', result.error);
         smsError = 'SMS delivery failed.';
       }
@@ -98,6 +103,8 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
     email_sent_at: sent_email ? now : null,
     sms_sent_at: sent_sms ? now : null,
     banner_sent_at: sent_banner ? now : null,
+    email_message_id,
+    sms_message_id,
     created_by: createdBy,
   });
   if (insErr) {

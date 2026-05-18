@@ -62,12 +62,24 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     userAgent: ua,
   });
 
-  // Log + bump used_count.
+  // Log the tap, linked to both the visitor it produced and the share row.
   await supabase.from('invite_uses').insert({
     invite_id: invite.id,
+    visitor_id: visitor?.id ?? null,
+    shared_wishlist_id: shared.id,
     ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
+
+  // First-touch event for the journey timeline.
+  if (visitor?.id) {
+    await supabase.from('visitor_events').insert({
+      visitor_id: visitor.id,
+      event_type: 'share_tap',
+      path: `/wishlist/${token}`,
+      metadata: { invite_id: invite.id, shared_wishlist_id: shared.id, sharer_name: shared.sharer_name },
+    });
+  }
   const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });
   if (rpc.error) {
     await supabase.from('invites').update({ used_count: invite.used_count + 1 }).eq('id', invite.id);

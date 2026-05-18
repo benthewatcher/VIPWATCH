@@ -6,6 +6,8 @@ import { Footer } from '@/components/site/Footer';
 import { WhatsAppButton } from '@/components/site/WhatsAppButton';
 import { BeginCommissionCTA } from '@/components/site/BeginCommissionCTA';
 import { VisitorBanner } from '@/components/site/VisitorBanner';
+import { PageviewTracker } from '@/components/site/PageviewTracker';
+import { Suspense } from 'react';
 
 // Pages with their own foot CTA — skip the global "Begin a commission" strip
 // to avoid duplicate CTAs at the bottom of the page.
@@ -39,6 +41,9 @@ export default async function LocaleLayout({
       <Footer locale={typed} />
       <WhatsAppButton locale={typed} />
       <VisitorBanner />
+      <Suspense fallback={null}>
+        <PageviewTracker />
+      </Suspense>
     </div>
   );
 }

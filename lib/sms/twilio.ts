@@ -2,7 +2,9 @@
 // Returns { ok: true } on success, { ok: false, error } otherwise.
 // Designed to fail gracefully when env vars are missing so dev keeps working.
 
-export type SendSmsResult = { ok: true } | { ok: false; error: string };
+export type SendSmsResult =
+  | { ok: true; messageSid: string | null }
+  | { ok: false; error: string };
 
 export async function sendSms(toPhone: string, body: string): Promise<SendSmsResult> {
   const sid = process.env.TWILIO_ACCOUNT_SID;
@@ -40,7 +42,8 @@ export async function sendSms(toPhone: string, body: string): Promise<SendSmsRes
     const text = await res.text().catch(() => '');
     return { ok: false, error: `Twilio ${res.status}: ${text.slice(0, 240)}` };
   }
-  return { ok: true };
+  const json = (await res.json().catch(() => ({}))) as { sid?: string };
+  return { ok: true, messageSid: json.sid ?? null };
 }
 
 /**

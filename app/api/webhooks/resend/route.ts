@@ -1,14 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient as createSb } from '@supabase/supabase-js';
 
-// Resend webhook receiver. Configure in Resend dashboard:
-//   URL:    https://<host>/api/webhooks/resend
-//   Events: email.delivered, email.opened, email.clicked, email.bounced
-//   Auth:   set RESEND_WEBHOOK_SECRET in env; Resend signs requests with
-//           an "Authorization: Bearer ..." header (or svix headers, depending
-//           on plan). We accept either bearer or svix-signature.
-//
-// Payload reference: https://resend.com/docs/dashboard/webhooks
+// Resend webhook receiver. Resend signs via Svix:
+//   headers: svix-id, svix-timestamp, svix-signature
+//   secret:  whsec_<base64>  (from the Resend webhook detail page)
+// Set RESEND_WEBHOOK_SECRET in env to enable verification.
 
 export const dynamic = 'force-dynamic';
 
@@ -24,19 +20,52 @@ type ResendEvent = {
   data: { email_id?: string; id?: string };
 };
 
+// Verify Svix signature against the whsec_... secret. Returns true on match.
+async function verifySvix(req: NextRequest, rawBody: string): Promise<boolean> {
+  const secret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!secret) return true; // No secret configured → skip verification.
+
+  const svixId = req.headers.get('svix-id');
+  const svixTimestamp = req.headers.get('svix-timestamp');
+  const svixSignature = req.headers.get('svix-signature');
+  if (!svixId || !svixTimestamp || !svixSignature) return false;
+
+  // Reject very old payloads (5 min tolerance).
+  const ts = Number(svixTimestamp);
+  if (!Number.isFinite(ts) || Math.abs(Date.now() / 1000 - ts) > 300) return false;
+
+  // The secret is "whsec_<base64>". Decode the base64 portion to raw key bytes.
+  const b64 = secret.startsWith('whsec_') ? secret.slice(6) : secret;
+  const keyBytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBytes,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const payload = `${svixId}.${svixTimestamp}.${rawBody}`;
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, new TextEncoder().encode(payload));
+  const expected = btoa(String.fromCharCode(...new Uint8Array(sig)));
+
+  // svix-signature is "v1,<sig1> v1,<sig2>" — match any one.
+  return svixSignature
+    .split(' ')
+    .map((part) => part.split(',')[1])
+    .filter(Boolean)
+    .some((s) => s === expected);
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // Auth: simple shared-secret check.
-    const expected = process.env.RESEND_WEBHOOK_SECRET;
-    if (expected) {
-      const auth = req.headers.get('authorization') ?? '';
-      const got = auth.replace(/^Bearer\s+/i, '').trim();
-      if (got !== expected) {
-        return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
-      }
+    const rawBody = await req.text();
+    const verified = await verifySvix(req, rawBody);
+    if (!verified) {
+      return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
 
-    const event = (await req.json()) as ResendEvent;
+    const event = JSON.parse(rawBody) as ResendEvent;
     const messageId = event.data?.email_id ?? event.data?.id;
     if (!messageId) return NextResponse.json({ ok: true, skipped: 'no-id' });
 

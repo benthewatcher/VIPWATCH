@@ -18,21 +18,28 @@ export async function subscribeToNewsletter({
     return { ok: false, error: 'That email looks invalid.' };
   }
 
-  // 1. Insert (or no-op if already present)
+  // DB locale_code enum is ('fr','en'). App locales are ('en','ar'). Anything
+  // outside ('fr','en') gets normalised to 'en' to avoid an enum-cast failure.
+  const dbLocale: 'en' | 'fr' = locale === 'fr' ? 'fr' : 'en';
+
+  // 1. Insert. Anon RLS only allows INSERT (not UPDATE), so a repeat
+  // submission of the same email hits the unique constraint — treat that as
+  // success rather than surfacing an error.
   try {
     const supabase = (await createClient()) as any;
-    const { error } = await supabase.from('newsletter_subscribers').upsert(
-      {
-        email: email.trim().toLowerCase(),
-        locale: locale ?? 'en',
-        source: source ?? 'footer',
-        unsubscribed_at: null,
-      },
-      { onConflict: 'email' },
-    );
+    const { error } = await supabase.from('newsletter_subscribers').insert({
+      email: email.trim().toLowerCase(),
+      locale: dbLocale,
+      source: source ?? 'footer',
+    });
     if (error) {
-      console.error('[newsletter] DB upsert failed:', error.message);
-      return { ok: false, error: 'Could not subscribe. Try again later.' };
+      const msg = error.message ?? '';
+      const isDuplicate = error.code === '23505' || /duplicate|unique/i.test(msg);
+      if (!isDuplicate) {
+        console.error('[newsletter] DB insert failed:', msg);
+        return { ok: false, error: 'Could not subscribe. Try again later.' };
+      }
+      // Already subscribed — treat as success.
     }
   } catch (e) {
     console.error('[newsletter] DB exception:', e);

@@ -24,8 +24,19 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   }
 }
 
+const PREVIEW_BOT_UA = /(facebookexternalhit|facebot|twitterbot|slackbot|whatsapp|telegrambot|discordbot|linkedinbot|googlebot|bingbot|skypeuripreview|applebot|whatsapp\/2)/i;
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
+
+  // Skip everything for link-preview bots.
+  if (PREVIEW_BOT_UA.test(req.headers.get('user-agent') ?? '')) {
+    return new NextResponse('VIP WATCH — a friend has shared their wishlist with you.', {
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   const supabase = serviceClient() as any;
 
   const { data: shared } = await supabase

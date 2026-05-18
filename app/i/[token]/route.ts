@@ -31,11 +31,29 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   }
 }
 
+// Known link-preview bots — messaging apps & social platforms hit invite URLs
+// to build link cards. Treat them as no-ops so they don't burn the use count
+// or pollute the visitor list.
+const PREVIEW_BOT_UA = /(facebookexternalhit|facebot|twitterbot|slackbot|whatsapp|telegrambot|discordbot|linkedinbot|googlebot|bingbot|skypeuripreview|applebot|whatsapp\/2)/i;
+
+function isPreviewBot(ua: string): boolean {
+  return !!ua && PREVIEW_BOT_UA.test(ua);
+}
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
 
   if (!token || token.length < 6) {
     return NextResponse.redirect(new URL('/waitlist?reason=missing', req.url));
+  }
+
+  // For link-preview bots, just serve a minimal response so the page can be
+  // unfurled, but don't create a visitor, log a use, or set a cookie.
+  if (isPreviewBot(req.headers.get('user-agent') ?? '')) {
+    return new NextResponse('VIP WATCH — bespoke watchmaking, by invitation.', {
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
   }
 
   // For invite lookup we need to bypass RLS — use the service-role client when available.
@@ -93,19 +111,18 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
   }
 
-  // Personal invite pre-fill applies only to the FIRST tap. After that the
-  // link is treated as a forwardable invite — subsequent taps create a fresh
-  // visitor that goes through /welcome to capture their own name.
-  const isFirstPersonalTap = !!inv.is_personal && inv.used_count === 0;
-
+  // Personal invites are for one named recipient. Always pre-fill name/email
+  // /phone on every tap so they're seamless on any device. Link-preview bots
+  // (WhatsApp, iMessage, Slack) hit the URL first to build a preview — we
+  // don't want to "burn" the personal pre-fill on the bot's tap.
   const visitor = await createVisitor({
     inviteId: inv.id,
     referredByName: inv.label,
     ip,
     userAgent: ua,
-    name: isFirstPersonalTap ? inv.label : null,
-    email: isFirstPersonalTap ? inv.email : null,
-    phone: isFirstPersonalTap ? inv.phone : null,
+    name: inv.is_personal ? inv.label : null,
+    email: inv.is_personal ? inv.email : null,
+    phone: inv.is_personal ? inv.phone : null,
   });
 
   // Backfill visitor_id on the invite_use row + log a journey event.
@@ -121,12 +138,11 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     });
   }
 
-  // Set the cookie and bounce them. Skip /welcome only if we just pre-filled
-  // their identity from the invite (first tap on a personal link). Otherwise
-  // — including forwarded taps of a personal link — send to /welcome so this
-  // person enters their own name.
+  // Personal invites bypass /welcome on every tap (recipient is known).
+  // Regular invites still route through /welcome the first time a visitor
+  // row is created so we capture their name.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  const dest = isFirstPersonalTap ? '/en' : visitor?.id ? '/welcome' : '/en';
+  const dest = inv.is_personal ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

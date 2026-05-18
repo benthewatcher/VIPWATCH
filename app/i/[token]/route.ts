@@ -93,17 +93,19 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
   }
 
-  // Mint a visitor row so we can capture name later and attribute properly.
-  // Personal invites seed name/email/phone in the same insert so /welcome
-  // auto-skips and we don't risk a silent post-insert seed failure.
+  // Personal invite pre-fill applies only to the FIRST tap. After that the
+  // link is treated as a forwardable invite — subsequent taps create a fresh
+  // visitor that goes through /welcome to capture their own name.
+  const isFirstPersonalTap = !!inv.is_personal && inv.used_count === 0;
+
   const visitor = await createVisitor({
     inviteId: inv.id,
     referredByName: inv.label,
     ip,
     userAgent: ua,
-    name: inv.is_personal ? inv.label : null,
-    email: inv.is_personal ? inv.email : null,
-    phone: inv.is_personal ? inv.phone : null,
+    name: isFirstPersonalTap ? inv.label : null,
+    email: isFirstPersonalTap ? inv.email : null,
+    phone: isFirstPersonalTap ? inv.phone : null,
   });
 
   // Backfill visitor_id on the invite_use row + log a journey event.
@@ -119,10 +121,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     });
   }
 
-  // Set the cookie and bounce them.
+  // Set the cookie and bounce them. Skip /welcome only if we just pre-filled
+  // their identity from the invite (first tap on a personal link). Otherwise
+  // — including forwarded taps of a personal link — send to /welcome so this
+  // person enters their own name.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  // Personal invites already have a name → skip /welcome entirely.
-  const dest = inv.is_personal ? '/en' : visitor?.id ? '/welcome' : '/en';
+  const dest = isFirstPersonalTap ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

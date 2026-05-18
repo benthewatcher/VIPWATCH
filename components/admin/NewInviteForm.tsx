@@ -129,8 +129,7 @@ export function NewInviteForm() {
             name="max_uses"
             label="Max uses"
             type="number"
-            placeholder={isPersonal ? '1 (locked for personal)' : 'leave blank = unlimited'}
-            defaultValue={isPersonal ? '1' : ''}
+            placeholder="leave blank = unlimited"
           />
           <Field
             name="expires_in_days"

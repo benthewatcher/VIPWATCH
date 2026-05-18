@@ -111,18 +111,23 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
   }
 
-  // Personal invites are for one named recipient. Always pre-fill name/email
-  // /phone on every tap so they're seamless on any device. Link-preview bots
-  // (WhatsApp, iMessage, Slack) hit the URL first to build a preview — we
-  // don't want to "burn" the personal pre-fill on the bot's tap.
+  // Personal invite pre-fill applies only to the FIRST human tap — the named
+  // recipient. After that (forwarded to friends, or recipient on a new
+  // device) the link behaves like a regular invite: a fresh visitor row is
+  // created and routed through /welcome to capture their own name.
+  //
+  // Link-preview bots are filtered out earlier in this handler, so they
+  // can't "burn" this first-tap slot.
+  const isFirstPersonalTap = !!inv.is_personal && inv.used_count === 0;
+
   const visitor = await createVisitor({
     inviteId: inv.id,
     referredByName: inv.label,
     ip,
     userAgent: ua,
-    name: inv.is_personal ? inv.label : null,
-    email: inv.is_personal ? inv.email : null,
-    phone: inv.is_personal ? inv.phone : null,
+    name: isFirstPersonalTap ? inv.label : null,
+    email: isFirstPersonalTap ? inv.email : null,
+    phone: isFirstPersonalTap ? inv.phone : null,
   });
 
   // Backfill visitor_id on the invite_use row + log a journey event.
@@ -138,11 +143,12 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     });
   }
 
-  // Personal invites bypass /welcome on every tap (recipient is known).
-  // Regular invites still route through /welcome the first time a visitor
-  // row is created so we capture their name.
+  // Skip /welcome only when we just pre-filled the named recipient's
+  // identity (first human tap of a personal invite). Anyone else — a forward
+  // recipient, or the original recipient on a new device — sees /welcome so
+  // we capture their own name.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  const dest = inv.is_personal ? '/en' : visitor?.id ? '/welcome' : '/en';
+  const dest = isFirstPersonalTap ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

@@ -19,7 +19,16 @@ type Invite = {
   is_personal: boolean | null;
   email: string | null;
   phone: string | null;
+  dest_path: string | null;
 };
+
+function safeDestPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  if (typeof raw !== 'string') return null;
+  if (!raw.startsWith('/')) return null;
+  if (raw.startsWith('//')) return null;
+  return raw;
+}
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   try {
@@ -61,7 +70,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
 
   const { data: invite, error } = await supabase
     .from('invites')
-    .select('id, is_revoked, expires_at, max_uses, used_count, label, is_personal, email, phone')
+    .select('id, is_revoked, expires_at, max_uses, used_count, label, is_personal, email, phone, dest_path')
     .eq('token', token)
     .maybeSingle();
 

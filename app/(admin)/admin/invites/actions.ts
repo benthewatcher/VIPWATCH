@@ -12,7 +12,19 @@ export type CreateInviteInput = {
   max_uses?: number | null;        // null / undefined = unlimited
   expires_in_days?: number | null; // default 30
   is_personal?: boolean;           // pre-fill recipient details, skip /welcome
+  dest_path?: string | null;       // deep-link target, e.g. "/en/lookbook"; null = default /en
 };
+
+// Allow only same-site paths starting with "/". Strip query/hash for safety.
+function normaliseDestPath(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const t = raw.trim();
+  if (!t) return null;
+  if (!t.startsWith('/')) return null;
+  // Prevent protocol-relative or weird inputs like "//evil.com".
+  if (t.startsWith('//')) return null;
+  return t;
+}
 
 export async function createInvite(input: CreateInviteInput) {
   const supabase = (await createClient()) as any;
@@ -35,6 +47,7 @@ export async function createInvite(input: CreateInviteInput) {
         max_uses: input.max_uses ?? null,
         expires_at: expiresAt,
         is_personal: !!input.is_personal,
+        dest_path: normaliseDestPath(input.dest_path),
       })
       .select('id, token')
       .single();

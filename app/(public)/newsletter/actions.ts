@@ -18,9 +18,10 @@ export async function subscribeToNewsletter({
     return { ok: false, error: 'That email looks invalid.' };
   }
 
-  // DB locale_code enum is ('fr','en'). App locales are ('en','ar'). Anything
-  // outside ('fr','en') gets normalised to 'en' to avoid an enum-cast failure.
-  const dbLocale: 'en' | 'fr' = locale === 'fr' ? 'fr' : 'en';
+  // DB locale_code enum is ('fr','en'); app locales are ('en','ar'). Both
+  // app locales map to 'en' on the newsletter row since 'ar' would fail the
+  // enum cast and the field is cosmetic for outbound mail anyway.
+  const dbLocale = 'en' as const;
 
   // 1. Insert. Anon RLS only allows INSERT (not UPDATE), so a repeat
   // submission of the same email hits the unique constraint — treat that as

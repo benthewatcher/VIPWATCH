@@ -29,6 +29,7 @@ export function NewInviteForm() {
       max_uses: fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
       expires_in_days: fd.get('expires_in_days') ? Number(fd.get('expires_in_days')) : 30,
       is_personal: isPersonal,
+      dest_path: String(fd.get('dest_path') ?? '').trim() || null,
     };
     if (!input.label) {
       setErr(isPersonal ? "Recipient's name is required." : 'Label is required.');
@@ -124,6 +125,11 @@ export function NewInviteForm() {
           />
         </div>
         <Field name="notes" label="Notes" placeholder="Where you met, context, etc." />
+        <Field
+          name="dest_path"
+          label="Land them on (optional)"
+          placeholder="/en (default) — or /en/lookbook, /en/commissions, etc."
+        />
         <div className="grid md:grid-cols-2 gap-4">
           <Field
             name="max_uses"

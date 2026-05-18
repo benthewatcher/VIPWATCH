@@ -17,6 +17,7 @@ type Invite = {
   used_count: number;
   expires_at: string;
   is_revoked: boolean;
+  dest_path: string | null;
   created_at: string;
 };
 
@@ -41,7 +42,7 @@ export default async function InviteDetail({ params }: { params: Promise<{ id: s
   const supabase = (await createClient()) as any;
   const { data: invite } = await supabase
     .from('invites')
-    .select('id, token, label, phone, email, notes, max_uses, used_count, expires_at, is_revoked, created_at')
+    .select('id, token, label, phone, email, notes, max_uses, used_count, expires_at, is_revoked, dest_path, created_at')
     .eq('id', id)
     .maybeSingle();
   if (!invite) notFound();
@@ -97,6 +98,7 @@ export default async function InviteDetail({ params }: { params: Promise<{ id: s
             <Dt>Phone</Dt><Dd>{inv.phone ?? '—'}</Dd>
             <Dt>Email</Dt><Dd>{inv.email ?? '—'}</Dd>
             <Dt>Uses</Dt><Dd>{inv.used_count} / {inv.max_uses ?? '∞'}</Dd>
+            <Dt>Lands on</Dt><Dd className="font-mono text-xs">{inv.dest_path ?? '/en'}</Dd>
             <Dt>Expires</Dt><Dd>{new Date(inv.expires_at).toLocaleString()}</Dd>
             <Dt>Created</Dt><Dd>{new Date(inv.created_at).toLocaleString()}</Dd>
             {inv.notes && (

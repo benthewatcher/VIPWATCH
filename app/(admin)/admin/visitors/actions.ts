@@ -7,6 +7,34 @@ import { sendSms } from '@/lib/sms/twilio';
 
 const FROM = 'VIP WATCH <bespoke@forvip.watch>';
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderEmailHtml({ greeting, body }: { greeting: string; body: string }): string {
+  // Plain serif HTML, paragraphs from line breaks. Resend injects its open
+  // pixel + rewrites links for click tracking when an html body is present.
+  const paragraphs = body
+    .split(/\n{2,}/)
+    .map((p) => `<p style="margin:0 0 16px 0;">${escapeHtml(p).replace(/\n/g, '<br/>')}</p>`)
+    .join('');
+  return `<!doctype html>
+<html><body style="margin:0;padding:24px;font-family:Georgia,serif;color:#111;background:#fafafa;line-height:1.55;">
+<table cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;padding:32px;border:1px solid #eee;">
+<tr><td>
+<p style="margin:0 0 20px 0;font-weight:600;">${escapeHtml(greeting)}</p>
+${paragraphs}
+<p style="margin:32px 0 0 0;color:#888;font-size:13px;">— VIP WATCH</p>
+</td></tr>
+</table>
+</body></html>`;
+}
+
 export type ComposeInput = {
   visitor_id: string;
   subject?: string | null;
@@ -52,12 +80,16 @@ export async function sendVisitorMessage(input: ComposeInput): Promise<ComposeRe
       } else {
         try {
           const resend = new Resend(apiKey);
+          const greeting = v.name ? `Hello ${v.name},` : 'Hello,';
+          const text = `${greeting}\n\n${body}\n\n— VIP WATCH`;
+          const html = renderEmailHtml({ greeting, body });
           const res = await resend.emails.send({
             from: FROM,
             to: [v.email],
             replyTo: 'bespoke@forvip.watch',
             subject: input.subject?.trim() || 'A note from VIP WATCH',
-            text: `Hello ${v.name ?? ''},\n\n${body}\n\n— VIP WATCH`,
+            text,
+            html,
           });
           sent_email = true;
           email_message_id = (res.data as { id?: string } | null)?.id ?? null;

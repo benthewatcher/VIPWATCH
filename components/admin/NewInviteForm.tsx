@@ -4,12 +4,30 @@ import { useState, useTransition } from 'react';
 import { Copy, Check, Plus } from 'lucide-react';
 import { createInvite } from '@/app/(admin)/admin/invites/actions';
 
+// Curated list of landing pages the admin can pick from. "__custom__" reveals
+// a free-form text input for deep-linking to a specific commission/collection.
+const DEST_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Home (default — /en)' },
+  { value: '/en/lookbook', label: 'Lookbook — /en/lookbook' },
+  { value: '/en/atelier', label: 'Atelier — /en/atelier' },
+  { value: '/en/commissions', label: 'Commissions list — /en/commissions' },
+  { value: '/en/collections', label: 'Collections list — /en/collections' },
+  { value: '/en/services', label: 'Services — /en/services' },
+  { value: '/en/process', label: 'Process — /en/process' },
+  { value: '/en/blog', label: 'Journal — /en/blog' },
+  { value: '/en/arts-and-crafts', label: 'Arts & Crafts — /en/arts-and-crafts' },
+  { value: '/en/contact', label: 'Contact — /en/contact' },
+  { value: '__custom__', label: 'Custom path…' },
+];
+
 export function NewInviteForm() {
   const [pending, startTransition] = useTransition();
   const [err, setErr] = useState<string | null>(null);
   const [created, setCreated] = useState<{ token: string; label: string; url: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [isPersonal, setIsPersonal] = useState(false);
+  const [destChoice, setDestChoice] = useState<string>('');
+  const [destCustom, setDestCustom] = useState<string>('');
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,7 +47,10 @@ export function NewInviteForm() {
       max_uses: fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
       expires_in_days: fd.get('expires_in_days') ? Number(fd.get('expires_in_days')) : 30,
       is_personal: isPersonal,
-      dest_path: String(fd.get('dest_path') ?? '').trim() || null,
+      dest_path:
+        destChoice === '__custom__'
+          ? destCustom.trim() || null
+          : destChoice || null,
     };
     if (!input.label) {
       setErr(isPersonal ? "Recipient's name is required." : 'Label is required.');
@@ -125,11 +146,39 @@ export function NewInviteForm() {
           />
         </div>
         <Field name="notes" label="Notes" placeholder="Where you met, context, etc." />
-        <Field
-          name="dest_path"
-          label="Land them on (optional)"
-          placeholder="/en (default) — or /en/lookbook, /en/commissions, etc."
-        />
+        <label className="block">
+          <span className="text-[11px] uppercase tracking-[0.2em] text-text-muted">
+            Land them on
+          </span>
+          <select
+            value={destChoice}
+            onChange={(e) => setDestChoice(e.target.value)}
+            className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          >
+            {DEST_OPTIONS.map((o) => (
+              <option key={o.value || 'home'} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        {destChoice === '__custom__' && (
+          <label className="block">
+            <span className="text-[11px] uppercase tracking-[0.2em] text-text-muted">
+              Custom path
+            </span>
+            <input
+              type="text"
+              value={destCustom}
+              onChange={(e) => setDestCustom(e.target.value)}
+              placeholder="/en/commissions/atelier-no-3"
+              className="mt-2 w-full bg-bg-secondary border border-divider px-3 py-2 text-sm focus:border-accent focus:outline-none"
+            />
+            <span className="block text-[10px] text-text-muted mt-1">
+              Must start with &ldquo;/&rdquo;. Same-site paths only.
+            </span>
+          </label>
+        )}
         <div className="grid md:grid-cols-2 gap-4">
           <Field
             name="max_uses"

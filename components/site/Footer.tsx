@@ -40,6 +40,8 @@ export function Footer({ locale }: { locale: string }) {
           <span>{t('rights', { year })}</span>
           <div className="flex gap-6">
             <Link href={localized('/legal/privacy')} className="hover:text-accent">Privacy</Link>
+            <Link href={localized('/legal/terms')} className="hover:text-accent">Terms</Link>
+            <Link href={localized('/legal/legal-notice')} className="hover:text-accent">Legal notice</Link>
           </div>
         </div>
       </div>

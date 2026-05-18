@@ -1,7 +1,13 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
-const SUPPORTED_SLUGS = new Set(['privacy']);
+const SUPPORTED_SLUGS = new Set(['privacy', 'terms', 'legal-notice']);
+
+const TITLES: Record<string, string> = {
+  privacy: 'Privacy Policy',
+  terms: 'Terms of Service',
+  'legal-notice': 'Legal Notice',
+};
 
 export async function generateMetadata({
   params,
@@ -9,14 +15,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  if (slug === 'privacy') {
-    return {
-      title: 'Privacy Policy — VIP WATCH',
-      description:
-        'How VIP WATCH collects, uses and protects personal data of our visitors, clients and prospects.',
-    };
-  }
-  return {};
+  const title = TITLES[slug];
+  if (!title) return {};
+  return {
+    title: `${title} — VIP WATCH`,
+    description:
+      slug === 'privacy'
+        ? 'How VIP WATCH collects, uses and protects personal data of our visitors, clients and prospects.'
+        : `${title} for VIP WATCH.`,
+  };
 }
 
 export default async function LegalPage({
@@ -27,7 +34,25 @@ export default async function LegalPage({
   const { slug } = await params;
   if (!SUPPORTED_SLUGS.has(slug)) notFound();
   if (slug === 'privacy') return <PrivacyPolicy />;
-  return null;
+  return <ComingSoon title={TITLES[slug] ?? slug} />;
+}
+
+function ComingSoon({ title }: { title: string }) {
+  return (
+    <article className="mx-auto max-w-3xl px-6 py-24 md:py-32 text-text-primary">
+      <header className="mb-12">
+        <p className="text-[11px] uppercase tracking-[0.4em] text-accent">Legal</p>
+        <h1 className="font-serif text-4xl md:text-5xl mt-4 tracking-tight">{title}</h1>
+      </header>
+      <p className="text-text-muted text-sm md:text-base leading-relaxed">
+        This page is being prepared. In the meantime, please email{' '}
+        <a href="mailto:bespoke@forvip.watch" className="text-accent hover:underline">
+          bespoke@forvip.watch
+        </a>{' '}
+        with any questions about how we work or your data.
+      </p>
+    </article>
+  );
 }
 
 function PrivacyPolicy() {

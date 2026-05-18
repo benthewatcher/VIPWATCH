@@ -134,3 +134,51 @@ export async function deleteVisitorMessage(notificationId: string, visitorId: st
   revalidatePath(`/admin/visitors/${visitorId}`);
   revalidatePath('/admin/visitors');
 }
+
+export type UpdateVisitorInput = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+};
+
+export type UpdateVisitorResult = { ok: true } | { ok: false; error: string };
+
+export async function updateVisitor(input: UpdateVisitorInput): Promise<UpdateVisitorResult> {
+  if (!input.id) return { ok: false, error: 'Missing visitor id.' };
+  const supabase = (await createClient()) as any;
+
+  // Normalise: trim, treat empty string as null so we don't persist whitespace.
+  const norm = (v: string | null | undefined): string | null => {
+    if (v === undefined) return null;
+    if (v === null) return null;
+    const t = v.trim();
+    return t.length === 0 ? null : t;
+  };
+
+  const patch: Record<string, string | null> = {};
+  if (input.name !== undefined) patch.name = norm(input.name);
+  if (input.email !== undefined) {
+    const e = norm(input.email);
+    if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      return { ok: false, error: 'Email looks invalid.' };
+    }
+    patch.email = e;
+  }
+  if (input.phone !== undefined) {
+    const p = norm(input.phone);
+    if (p && !/^\+?[0-9 ()-]{6,}$/.test(p)) {
+      return { ok: false, error: 'Phone looks invalid. Use E.164 like +447521808964.' };
+    }
+    patch.phone = p ? p.replace(/[^\d+]/g, '') : null;
+  }
+
+  if (Object.keys(patch).length === 0) return { ok: true };
+
+  const { error } = await supabase.from('visitors').update(patch).eq('id', input.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/admin/visitors/${input.id}`);
+  revalidatePath('/admin/visitors');
+  return { ok: true };
+}

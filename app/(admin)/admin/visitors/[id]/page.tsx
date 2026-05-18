@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AdminHeader } from '@/components/admin/AdminHeader';
 import { createClient } from '@/lib/supabase/server';
 import { VisitorCompose } from '@/components/admin/VisitorCompose';
+import { VisitorEdit } from '@/components/admin/VisitorEdit';
 
 export const dynamic = 'force-dynamic';
 
@@ -107,7 +108,13 @@ export default async function VisitorDetail({ params }: { params: Promise<{ id: 
       />
       <main className="p-10 grid gap-10">
         <section className="border border-divider p-6 max-w-3xl">
-          <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted">Details</h2>
+          <div className="flex justify-between items-baseline gap-4">
+            <h2 className="text-xs uppercase tracking-[0.2em] text-text-muted">Details</h2>
+            <VisitorEdit
+              visitorId={v.id}
+              initial={{ name: v.name, email: v.email, phone: v.phone }}
+            />
+          </div>
           <dl className="mt-4 grid grid-cols-2 gap-y-3 text-sm">
             <Dt>Email</Dt>
             <Dd>

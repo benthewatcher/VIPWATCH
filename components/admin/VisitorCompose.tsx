@@ -5,13 +5,22 @@ import { useRouter } from 'next/navigation';
 import { Send, Check } from 'lucide-react';
 import { sendVisitorMessage } from '@/app/(admin)/admin/visitors/actions';
 
-export function VisitorCompose({ visitorId, hasEmail }: { visitorId: string; hasEmail: boolean }) {
+export function VisitorCompose({
+  visitorId,
+  hasEmail,
+  hasPhone,
+}: {
+  visitorId: string;
+  hasEmail: boolean;
+  hasPhone: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [sentAt, setSentAt] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [sendEmail, setSendEmail] = useState(hasEmail);
   const [sendBanner, setSendBanner] = useState(true);
+  const [sendSms, setSendSms] = useState(false);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -29,7 +38,7 @@ export function VisitorCompose({ visitorId, hasEmail }: { visitorId: string; has
         visitor_id: visitorId,
         subject: subject || null,
         body,
-        channels: { email: sendEmail, banner: sendBanner },
+        channels: { email: sendEmail, banner: sendBanner, sms: sendSms },
       });
       if (!res.ok) {
         setErr(res.error);
@@ -92,6 +101,15 @@ export function VisitorCompose({ visitorId, hasEmail }: { visitorId: string; has
             />
             Show on-site banner
           </label>
+          <label className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-text-muted">
+            <input
+              type="checkbox"
+              checked={sendSms}
+              onChange={(e) => setSendSms(e.target.checked)}
+              disabled={!hasPhone}
+            />
+            Send SMS{!hasPhone && <span className="text-text-muted/70 normal-case tracking-normal ml-1">(no phone on file)</span>}
+          </label>
         </div>
 
         {err && <p className="text-sm text-red-400">{err}</p>}
@@ -99,7 +117,7 @@ export function VisitorCompose({ visitorId, hasEmail }: { visitorId: string; has
         <div>
           <button
             type="submit"
-            disabled={pending || (!sendEmail && !sendBanner)}
+            disabled={pending || (!sendEmail && !sendBanner && !sendSms)}
             className="inline-flex items-center gap-2 border border-accent px-6 py-3 text-xs uppercase tracking-[0.25em] text-accent hover:bg-accent hover:text-bg-primary transition-colors disabled:opacity-50"
           >
             {sentAt ? <Check size={14} /> : <Send size={14} />}

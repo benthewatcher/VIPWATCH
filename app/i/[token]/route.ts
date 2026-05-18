@@ -31,11 +31,29 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   }
 }
 
+// Known link-preview bots — messaging apps & social platforms hit invite URLs
+// to build link cards. Treat them as no-ops so they don't burn the use count
+// or pollute the visitor list.
+const PREVIEW_BOT_UA = /(facebookexternalhit|facebot|twitterbot|slackbot|whatsapp|telegrambot|discordbot|linkedinbot|googlebot|bingbot|skypeuripreview|applebot|whatsapp\/2)/i;
+
+function isPreviewBot(ua: string): boolean {
+  return !!ua && PREVIEW_BOT_UA.test(ua);
+}
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
 
   if (!token || token.length < 6) {
     return NextResponse.redirect(new URL('/waitlist?reason=missing', req.url));
+  }
+
+  // For link-preview bots, just serve a minimal response so the page can be
+  // unfurled, but don't create a visitor, log a use, or set a cookie.
+  if (isPreviewBot(req.headers.get('user-agent') ?? '')) {
+    return new NextResponse('VIP WATCH — bespoke watchmaking, by invitation.', {
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
   }
 
   // For invite lookup we need to bypass RLS — use the service-role client when available.
@@ -69,12 +87,19 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
   // Log the use (best-effort, don't fail the sign-in if logging fails).
   const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? '';
   const ua = req.headers.get('user-agent') ?? '';
-  const { error: logErr } = await supabase.from('invite_uses').insert({
-    invite_id: inv.id,
-    ip_hash: ip ? await hashIp(ip) : null,
-    user_agent: ua.slice(0, 500),
-  });
+  // visitor_id is filled in after createVisitor below.
+  let inviteUseId: string | null = null;
+  const { data: useRow, error: logErr } = await supabase
+    .from('invite_uses')
+    .insert({
+      invite_id: inv.id,
+      ip_hash: ip ? await hashIp(ip) : null,
+      user_agent: ua.slice(0, 500),
+    })
+    .select('id')
+    .single();
   if (logErr) console.warn('[invite] invite_uses insert failed (non-fatal):', logErr.message);
+  else inviteUseId = (useRow as { id: string } | null)?.id ?? null;
 
   // Bump used_count. Try RPC first; if it doesn't exist, fall back to plain update.
   const rpc = await supabase.rpc('increment_invite_used', { _invite_id: inv.id });
@@ -86,34 +111,44 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     if (updErr) console.warn('[invite] used_count update failed (non-fatal):', updErr.message);
   }
 
-  // Mint a visitor row so we can capture name later and attribute properly.
+  // Personal invite pre-fill applies only to the FIRST human tap — the named
+  // recipient. After that (forwarded to friends, or recipient on a new
+  // device) the link behaves like a regular invite: a fresh visitor row is
+  // created and routed through /welcome to capture their own name.
+  //
+  // Link-preview bots are filtered out earlier in this handler, so they
+  // can't "burn" this first-tap slot.
+  const isFirstPersonalTap = !!inv.is_personal && inv.used_count === 0;
+
   const visitor = await createVisitor({
     inviteId: inv.id,
     referredByName: inv.label,
     ip,
     userAgent: ua,
+    name: isFirstPersonalTap ? inv.label : null,
+    email: isFirstPersonalTap ? inv.email : null,
+    phone: isFirstPersonalTap ? inv.phone : null,
   });
 
-  // For personal invites, seed the visitor with the recipient's details that
-  // were filled in admin. Result: visitor.name is set → /welcome auto-skips.
-  if (visitor?.id && inv.is_personal) {
-    const { error: seedErr } = await supabase
-      .from('visitors')
-      .update({
-        name: inv.label,
-        email: inv.email,
-        phone: inv.phone,
-      })
-      .eq('id', visitor.id);
-    if (seedErr) {
-      console.warn('[invite] visitor seed failed (non-fatal):', seedErr.message);
+  // Backfill visitor_id on the invite_use row + log a journey event.
+  if (visitor?.id) {
+    if (inviteUseId) {
+      await supabase.from('invite_uses').update({ visitor_id: visitor.id }).eq('id', inviteUseId);
     }
+    await supabase.from('visitor_events').insert({
+      visitor_id: visitor.id,
+      event_type: 'share_tap',
+      path: `/i/${token}`,
+      metadata: { invite_id: inv.id, is_personal: !!inv.is_personal },
+    });
   }
 
-  // Set the cookie and bounce them.
+  // Skip /welcome only when we just pre-filled the named recipient's
+  // identity (first human tap of a personal invite). Anyone else — a forward
+  // recipient, or the original recipient on a new device — sees /welcome so
+  // we capture their own name.
   const cookie = await createSessionCookie(inv.id, visitor?.id ?? null);
-  // Personal invites already have a name → skip /welcome entirely.
-  const dest = inv.is_personal ? '/en' : visitor?.id ? '/welcome' : '/en';
+  const dest = isFirstPersonalTap ? '/en' : visitor?.id ? '/welcome' : '/en';
   const res = NextResponse.redirect(new URL(dest, req.url));
   res.cookies.set(cookie);
   return res;

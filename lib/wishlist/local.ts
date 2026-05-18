@@ -1,5 +1,7 @@
 'use client';
 
+import { track } from '@/lib/track';
+
 const KEY = 'vipwatch:wishlist';
 
 function read(): string[] {
@@ -34,11 +36,29 @@ export function toggleLiked(id: string): boolean {
   if (i === -1) {
     current.push(id);
     write(current);
+    track({ event_type: 'wishlist_add', metadata: { commission_id: id } });
+    syncWishlist(current);
     return true;
   }
   current.splice(i, 1);
   write(current);
+  track({ event_type: 'wishlist_remove', metadata: { commission_id: id } });
+  syncWishlist(current);
   return false;
+}
+
+// Fire-and-forget sync to the server. Server reconciles against wishlist_items
+// for the current visitor (no-op if not signed in).
+function syncWishlist(ids: string[]): void {
+  if (typeof window === 'undefined') return;
+  fetch('/api/wishlist/sync', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ commission_ids: ids }),
+    keepalive: true,
+  }).catch(() => {
+    /* never disturb the user */
+  });
 }
 
 export function subscribe(cb: () => void): () => void {

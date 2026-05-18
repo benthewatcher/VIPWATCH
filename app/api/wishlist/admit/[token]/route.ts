@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createClient as createSb } from '@supabase/supabase-js';
-import { createSessionCookie } from '@/lib/auth/invite-session';
+import { createSessionCookie, hashIp } from '@/lib/auth/invite-session';
 import { createVisitor } from '@/lib/auth/visitor';
 
 // Admit a wishlist recipient through the SHARER's invite. This is a Route
@@ -24,8 +24,19 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ token: stri
   }
 }
 
+const PREVIEW_BOT_UA = /(facebookexternalhit|facebot|twitterbot|slackbot|whatsapp|telegrambot|discordbot|linkedinbot|googlebot|bingbot|skypeuripreview|applebot|whatsapp\/2)/i;
+
 async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }> }) {
   const { token } = await ctx.params;
+
+  // Skip everything for link-preview bots.
+  if (PREVIEW_BOT_UA.test(req.headers.get('user-agent') ?? '')) {
+    return new NextResponse('VIP WATCH — a friend has shared their wishlist with you.', {
+      status: 200,
+      headers: { 'content-type': 'text/plain; charset=utf-8' },
+    });
+  }
+
   const supabase = serviceClient() as any;
 
   const { data: shared } = await supabase
@@ -62,12 +73,24 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ token: string }
     userAgent: ua,
   });
 
-  // Log + bump used_count.
+  // Log the tap, linked to both the visitor it produced and the share row.
   await supabase.from('invite_uses').insert({
     invite_id: invite.id,
-    ip_hash: null,
+    visitor_id: visitor?.id ?? null,
+    shared_wishlist_id: shared.id,
+    ip_hash: ip ? await hashIp(ip) : null,
     user_agent: ua.slice(0, 500),
   });
+
+  // First-touch event for the journey timeline.
+  if (visitor?.id) {
+    await supabase.from('visitor_events').insert({
+      visitor_id: visitor.id,
+      event_type: 'share_tap',
+      path: `/wishlist/${token}`,
+      metadata: { invite_id: invite.id, shared_wishlist_id: shared.id, sharer_name: shared.sharer_name },
+    });
+  }
   const rpc = await supabase.rpc('increment_invite_used', { _invite_id: invite.id });
   if (rpc.error) {
     await supabase.from('invites').update({ used_count: invite.used_count + 1 }).eq('id', invite.id);

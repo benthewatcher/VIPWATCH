@@ -8,7 +8,7 @@ import { CommissionSpec } from '@/components/site/CommissionSpec';
 import { ThemeForce } from '@/components/site/ThemeForce';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { createAnonClient } from '@/lib/supabase/anon';
+import { createAnonClient, createAnonClientOrNull } from '@/lib/supabase/anon';
 import { publicMediaUrl } from '@/lib/utils/storage';
 import { pickLocale } from '@/lib/i18n/pick';
 import type { Locale } from '@/lib/i18n/config';
@@ -65,12 +65,12 @@ export async function generateMetadata({
 }
 
 export async function generateStaticParams() {
-  const supabase = createAnonClient();
+  const supabase = createAnonClientOrNull();
+  if (!supabase) return [];
   const { data } = await supabase
     .from('commissions')
     .select('slug')
     .eq('status', 'published');
-  // Generate for both locales.
   return (data ?? []).flatMap((c) => [
     { locale: 'en', slug: c.slug },
     { locale: 'ar', slug: c.slug },

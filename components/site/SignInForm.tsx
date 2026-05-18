@@ -131,7 +131,7 @@ export function SignInForm() {
           autoFocus
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="+44 7521 808964"
+          placeholder="+44 7852 111111"
           className="mt-2 w-full bg-transparent border-b border-divider py-3 text-sm focus:border-accent focus:outline-none"
         />
       </label>

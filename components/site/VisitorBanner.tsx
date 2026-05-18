@@ -25,6 +25,7 @@ export async function VisitorBanner() {
     .eq('visitor_id', session.vid)
     .eq('sent_banner', true)
     .is('read_at', null)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();

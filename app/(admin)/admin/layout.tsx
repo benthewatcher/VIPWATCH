@@ -38,8 +38,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // The proxy gates protected admin routes. /admin/login and /admin/auth/* render
-  // without chrome (no user yet); render children only.
+  // /admin/login and /admin/auth/* render without chrome (no user yet).
   if (!user) return <>{children}</>;
 
   return (

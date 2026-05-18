@@ -12,6 +12,7 @@ type Visitor = {
   phone: string | null;
   invite_id: string | null;
   referred_by_name: string | null;
+  shared_wishlist_id: string | null;
   first_seen_at: string;
   last_seen_at: string;
 };
@@ -20,12 +21,12 @@ export default async function VisitorsPage() {
   const supabase = (await createClient()) as any;
   const { data } = await supabase
     .from('visitors')
-    .select('id, name, email, phone, invite_id, referred_by_name, first_seen_at, last_seen_at')
+    .select('id, name, email, phone, invite_id, referred_by_name, shared_wishlist_id, first_seen_at, last_seen_at')
     .order('last_seen_at', { ascending: false })
     .limit(500);
   const rows = (data ?? []) as Visitor[];
 
-  // Pull invite labels for attribution.
+  // Pull invite labels.
   const inviteIds = Array.from(new Set(rows.map((r) => r.invite_id).filter((v): v is string => !!v)));
   const inviteLabels = new Map<string, string>();
   if (inviteIds.length > 0) {
@@ -38,13 +39,30 @@ export default async function VisitorsPage() {
     }
   }
 
+  // Pull share-sharer names for visitors who arrived via a /wishlist/<token>.
+  const shareIds = Array.from(
+    new Set(rows.map((r) => r.shared_wishlist_id).filter((v): v is string => !!v)),
+  );
+  const shareSharers = new Map<string, string | null>();
+  if (shareIds.length > 0) {
+    const { data: shares } = await supabase
+      .from('shared_wishlists')
+      .select('id, sharer_name')
+      .in('id', shareIds);
+    for (const s of ((shares ?? []) as Array<{ id: string; sharer_name: string | null }>)) {
+      shareSharers.set(s.id, s.sharer_name);
+    }
+  }
+
   return (
     <>
       <AdminHeader title="Visitors" />
       <main className="p-10">
-        <p className="text-xs text-text-muted mb-6 max-w-2xl">
-          Everyone who has entered a name and email at /welcome. Click a row to send them a
-          message — by email and/or as an on-site note that surfaces next time they visit.
+        <p className="text-xs text-text-muted mb-6 max-w-3xl">
+          Everyone who has tapped an invite. <strong className="text-text-primary">Invite</strong>{' '}
+          is the admin-created link they used. <strong className="text-text-primary">Forwarded from</strong>{' '}
+          is the actual person who shared the link with them — only set when they arrived through a
+          shared wishlist. Click a row to send them a message.
         </p>
 
         {rows.length === 0 ? (
@@ -57,7 +75,8 @@ export default async function VisitorsPage() {
                   <th className="px-4 py-3 text-left">Last seen</th>
                   <th className="px-4 py-3 text-left">Name</th>
                   <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-left">Invited by</th>
+                  <th className="px-4 py-3 text-left">Invite</th>
+                  <th className="px-4 py-3 text-left">Forwarded from</th>
                   <th className="px-4 py-3 text-left">First seen</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -92,15 +111,22 @@ export default async function VisitorsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-[11px]">
-                        {r.referred_by_name ? (
-                          <span>{r.referred_by_name}</span>
-                        ) : inviteLabel ? (
+                        {inviteLabel ? (
                           <Link href={`/admin/invites/${r.invite_id}`} className="text-accent hover:underline">
                             {inviteLabel}
                           </Link>
                         ) : (
                           <span className="text-text-muted">—</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3 text-[11px]">
+                        {(() => {
+                          const sharer = r.shared_wishlist_id
+                            ? shareSharers.get(r.shared_wishlist_id)
+                            : null;
+                          if (sharer) return <span>{sharer}</span>;
+                          return <span className="text-text-muted">— direct tap</span>;
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-text-muted whitespace-nowrap">
                         {new Date(r.first_seen_at).toLocaleDateString()}

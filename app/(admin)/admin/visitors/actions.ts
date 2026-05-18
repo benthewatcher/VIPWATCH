@@ -200,7 +200,7 @@ export async function updateVisitor(input: UpdateVisitorInput): Promise<UpdateVi
   if (input.phone !== undefined) {
     const p = norm(input.phone);
     if (p && !/^\+?[0-9 ()-]{6,}$/.test(p)) {
-      return { ok: false, error: 'Phone looks invalid. Use E.164 like +447521808964.' };
+      return { ok: false, error: 'Phone looks invalid. Use E.164 like +447852111111.' };
     }
     patch.phone = p ? p.replace(/[^\d+]/g, '') : null;
   }

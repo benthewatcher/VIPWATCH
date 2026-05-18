@@ -86,7 +86,7 @@ export function WelcomeForm({ next }: { next: string }) {
           type="tel"
           inputMode="tel"
           autoComplete="tel"
-          placeholder="+44 7521 808964"
+          placeholder="+44 7852 111111"
           className="mt-2 w-full bg-transparent border-b border-divider py-3 focus:border-accent focus:outline-none"
         />
       </label>

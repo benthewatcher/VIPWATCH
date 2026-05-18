@@ -60,7 +60,7 @@ export function VisitorEdit({ visitorId, initial }: Props) {
     <form onSubmit={onSubmit} className="mt-6 grid gap-4 max-w-md">
       <Field label="Name" value={name} onChange={setName} placeholder="Alice" />
       <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="alice@example.com" />
-      <Field label="Phone" value={phone} onChange={setPhone} type="tel" placeholder="+447521808964" />
+      <Field label="Phone" value={phone} onChange={setPhone} type="tel" placeholder="+447852111111" />
 
       {err && <p className="text-sm text-red-400">{err}</p>}
 

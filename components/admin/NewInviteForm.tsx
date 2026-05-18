@@ -114,7 +114,7 @@ export function NewInviteForm() {
           <Field
             name="phone"
             label={isPersonal ? "Recipient's phone" : 'Phone (for SMS re-auth)'}
-            placeholder="+44 7521 808964"
+            placeholder="+44 7852 111111"
           />
           <Field
             name="email"

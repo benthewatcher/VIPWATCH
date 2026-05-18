@@ -23,8 +23,10 @@ export function NewInviteForm() {
       phone: String(fd.get('phone') ?? '').trim() || null,
       email: String(fd.get('email') ?? '').trim() || null,
       notes: String(fd.get('notes') ?? '').trim() || null,
-      // Personal invites are single-use: the link belongs to that one person.
-      max_uses: isPersonal ? 1 : fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
+      // Personal invites stay unlimited — the recipient is a known contact who
+      // may revisit on different devices. Cap manually only if the admin set
+      // an explicit max_uses in the non-personal form.
+      max_uses: fd.get('max_uses') ? Number(fd.get('max_uses')) : null,
       expires_in_days: fd.get('expires_in_days') ? Number(fd.get('expires_in_days')) : 30,
       is_personal: isPersonal,
     };
@@ -96,7 +98,8 @@ export function NewInviteForm() {
             </span>
             <span className="block text-[11px] text-text-muted mt-1">
               When ticked, the recipient skips the &ldquo;What&apos;s your name?&rdquo; step.
-              Their name, email and phone are read from the fields below. Single-use.
+              Their name, email and phone are read from the fields below. Unlimited use — the
+              recipient can revisit on any device.
             </span>
           </span>
         </label>
